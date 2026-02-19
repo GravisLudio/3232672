@@ -2,8 +2,8 @@ from tkinter import Entry, Label, Frame, Tk, Button, ttk, Scrollbar, VERTICAL, H
 from conexion import *
 
 class Registro(Frame):
-    def _init_(self, master, *args, **kwargs):
-        super()._init_(master, *args, **kwargs)
+    def __init__(self, master, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
                                     
         self.frame1 = Frame(master)
         self.frame1.grid(columnspan=2, column=0, row=0)
@@ -27,6 +27,7 @@ class Registro(Frame):
 
         self.base_datos = Registro_datos()
         self.create_widgets()
+
     def create_widgets(self):
         Label(self.frame1, text='R E G I S T R O \t D E \t D A T O S', bg='gray22', fg='white', font=('Orbitron', 15, 'bold')).grid(column=0, row=0)
         
@@ -82,6 +83,7 @@ class Registro(Frame):
         estilo.map('Treeview', background=[('selected', 'green2')], foreground=[('selected', 'black')])
 
         self.tabla.bind("<<TreeviewSelect>>", self.obtener_fila)
+
     def agregar_datos(self):
         codigo = self.codigo.get()
         nombre = self.nombre.get()
@@ -93,15 +95,18 @@ class Registro(Frame):
             self.tabla.insert('', 0, text=codigo, values=datos)
             self.base_datos.inserta_producto(codigo, nombre, modelo, precio, cantidad)
             self.limpiar_entradas()
+
     def limpiar_entradas(self):
         self.codigo.set('')
         self.nombre.set('')
         self.modelo.set('')
         self.precio.set('')
         self.cantidad.set('')
+
     def limpiar_datos(self):
         self.tabla.delete(*self.tabla.get_children())
         self.limpiar_entradas()
+
     def buscar_nombre(self):
         nombre_producto = self.buscar.get()
         # Se agregan comillas simples para la consulta SQL
@@ -110,7 +115,8 @@ class Registro(Frame):
 
         for i, fila in enumerate(nombre_buscado):
             # fila[1]=CODIGO, fila[2]=NOMBRE, fila[3]=MODELO, fila[4]=PRECIO, fila[5]=CANTIDAD
-            self.tabla.insert('', i, text=fila[1], values=(fila[2], fila[3], fila[4], fila[5]))    
+            self.tabla.insert('', i, text=fila[1], values=(fila[2], fila[3], fila[4], fila[5]))
+
     def mostrar_todo(self):
         self.tabla.delete(*self.tabla.get_children())
         registro = self.base_datos.mostrar_productos()
@@ -118,12 +124,14 @@ class Registro(Frame):
         for i, fila in enumerate(registro):
             # La inserción se realiza dentro del bucle
             self.tabla.insert('', i, text=fila[1], values=(fila[2], fila[3], fila[4], fila[5]))
+
     def eliminar_fila(self):
         fila = self.tabla.selection()
         if len(fila) != 0:        
             self.tabla.delete(fila)
             nombre = ("'"+ str(self.nombre_borar) + "'")       
             self.base_datos.elimina_productos(nombre)
+
     def obtener_fila(self, event):
         current_item = self.tabla.focus()
         if not current_item:
@@ -131,6 +139,7 @@ class Registro(Frame):
         data = self.tabla.item(current_item)
         # Se obtiene el nombre (primer valor de la tupla 'values')
         self.nombre_borar = data['values'][0]
+
 def main():
     ventana = Tk()
     ventana.wm_title("Registro de Datos en MySQL")
@@ -141,4 +150,4 @@ def main():
     app.mainloop()
 
 if __name__=="__main__":
-    main() 
+    main()
