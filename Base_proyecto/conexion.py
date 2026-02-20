@@ -72,3 +72,23 @@ class InventarioDB:
             self.cursor.close()
             self.conexion.close()
             print("Sesión HSGS finalizada correctamente.")
+    def obtener_reporte_horas(self, documento):
+        """Calcula el total de horas acumuladas por aprendiz."""
+        if not self.conexion: return []
+        try:
+            # Calcula la diferencia en horas entre entrada y salida
+            query = """
+                SELECT 
+                    DATE(fecha_registro) as fecha,
+                    fecha_registro as entrada,
+                    fecha_salida as salida,
+                    ROUND(TIMESTAMPDIFF(MINUTE, fecha_registro, fecha_salida) / 60, 2) as horas
+                FROM asistencias 
+                WHERE documento_estudiante = %s AND fecha_salida IS NOT NULL
+                ORDER BY fecha_registro DESC
+            """
+            self.cursor.execute(query, (documento,))
+            return self.cursor.fetchall()
+        except Error as e:
+            print(f"Error al obtener reporte: {e}")
+            return []

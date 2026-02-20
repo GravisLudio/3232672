@@ -36,7 +36,9 @@ class SistemaHSGS:
         tk.Label(f, text="GATEWAY HSGS", font=("Segoe UI", 20, "bold"), bg="white", fg=self.sena_dark).pack(pady=40)
         tk.Button(f, text="💻 TERMINAL APRENDICES", bg=self.sena_green, fg="white", font=("bold", 12), width=30, height=2, command=self.mostrar_terminal).pack(pady=10)
         tk.Button(f, text="🔐 PANEL ADMINISTRATIVO", bg="#333333", fg="white", font=("bold", 12), width=30, height=2, command=self.mostrar_login).pack(pady=10)
-
+        # Dentro de mostrar_inicio
+        ttk.Button(f, text="👤 MI PERFIL (APRENDIZ)", style="Sena.TButton", 
+           command=self.login_aprendiz).pack(pady=10, ipady=10, padx=60, fill="x")
     # --- VISTA 2: TERMINAL (CON VALIDACIÓN DE PAPELERA) ---
     def mostrar_terminal(self):
         self.limpiar_pantalla()
@@ -217,7 +219,63 @@ class SistemaHSGS:
         tk.Button(f_btn_p, text="♻️ RESTAURAR", bg=self.sena_green, fg="white", command=restaurar).pack(side="left", padx=10)
         tk.Button(f_btn_p, text="🔥 ELIMINAR PERMANENTE", bg="black", fg="white", command=hard_delete).pack(side="left", padx=10)
         tk.Button(t_pap, text="🔄 ACTUALIZAR", command=refresh_pap).pack(pady=5); refresh_pap()
+    def login_aprendiz(self):
+        self.limpiar_pantalla()
+        f = tk.Frame(self.main_container, bg="white", highlightbackground="#E0E0E0", highlightthickness=1)
+        f.place(relx=0.5, rely=0.5, anchor="center", width=400, height=400)
+        
+        tk.Label(f, text="ACCESO APRENDIZ", font=("Segoe UI", 18, "bold"), bg="white").pack(pady=30)
+        
+        tk.Label(f, text="Documento", bg="white").pack(anchor="w", padx=50)
+        doc_ent = ttk.Entry(f); doc_ent.pack(pady=5, padx=50, fill="x")
+        
+        tk.Label(f, text="Contraseña", bg="white").pack(anchor="w", padx=50, pady=(10,0))
+        pass_ent = ttk.Entry(f, show="*") ; pass_ent.pack(pady=5, padx=50, fill="x")
 
+        def intentar_login():
+            q = "SELECT * FROM estudiantes WHERE documento=%s AND password=%s"
+            self.db.cursor.execute(q, (doc_ent.get(), pass_ent.get()))
+            user = self.db.cursor.fetchone()
+            if user: self.mostrar_panel_aprendiz(user)
+            else: messagebox.showerror("Error", "Documento o clave incorrectos")
+
+        ttk.Button(f, text="ENTRAR", style="Sena.TButton", command=intentar_login).pack(pady=20, padx=50, fill="x")
+        ttk.Button(f, text="VOLVER", style="Dark.TButton", command=self.mostrar_inicio).pack(padx=50, fill="x")
+
+    def mostrar_panel_aprendiz(self, datos_user):
+        self.limpiar_pantalla()
+        # Encabezado personalizado
+        head = tk.Frame(self.main_container, bg=self.sena_green, height=60)
+        head.pack(fill="x")
+        tk.Label(head, text=f"BIENVENIDO: {datos_user['nombre_completo']}", fg="white", bg=self.sena_green, font=("Segoe UI", 12, "bold")).pack(side="left", padx=20)
+        ttk.Button(head, text="SALIR", style="Dark.TButton", command=self.mostrar_inicio).pack(side="right", padx=10, pady=10)
+
+        # Contenedor de Reporte
+        body = tk.Frame(self.main_container, bg="white")
+        body.pack(fill="both", expand=True, padx=30, pady=30)
+
+        tk.Label(body, text="📅 MI CALENDARIO DE ASISTENCIA", font=("Segoe UI", 14, "bold"), bg="white").pack(pady=10)
+
+        # Tabla de Reporte (Calendario/Entradas/Salidas)
+        cols = ("FECHA", "ENTRADA", "SALIDA", "TOTAL HORAS")
+        tv = ttk.Treeview(body, columns=cols, show="headings", height=15)
+        for c in cols: tv.heading(c, text=c); tv.column(c, anchor="center")
+        tv.pack(fill="both", expand=True)
+
+        # Cargar datos
+        reporte = self.db.obtener_reporte_horas(datos_user['documento'])
+        total_acumulado = 0
+        for r in reporte:
+            tv.insert("", "end", values=(r['fecha'], r['entrada'], r['salida'], f"{r['horas']} hrs"))
+            total_acumulado += r['horas']
+
+        # Resumen Inferior
+        resumen = tk.Frame(body, bg="#f9f9f9", pady=20)
+        resumen.pack(fill="x")
+        tk.Label(resumen, text=f"TOTAL HORAS ACUMULADAS: {round(total_acumulado, 2)}", 
+                 font=("Segoe UI", 14, "bold"), bg="#f9f9f9", fg=self.sena_dark).pack()
+    
+    
 if __name__ == "__main__":
     root = tk.Tk()
     app = SistemaHSGS(root)
