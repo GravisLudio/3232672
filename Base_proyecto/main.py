@@ -1,137 +1,224 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
-import datetime
-from conexion import InventarioDB # Asegúrate de que apunte a TechSenaHSGS
+from tkinter import ttk, messagebox, filedialog
+import pandas as pd
+from conexion import InventarioDB 
 
-class SREE_HSGS:
+class SistemaHSGS:
     def __init__(self, root):
         self.root = root
-        self.root.title("HSGS - SREE | Sistema de Registro Estudiantil")
-        self.root.geometry("1100x700")
+        self.root.title("SREE PRO - High Softwares From Gravis Systems")
+        self.root.geometry("1200x850")
         self.root.configure(bg="#F0F2F5")
+        
+        # Conexión con cursor bufferizado para evitar "Unread result found"
+        self.db = InventarioDB()
+        if self.db.conexion:
+            self.db.cursor = self.db.conexion.cursor(dictionary=True, buffered=True)
 
-        # Paleta Institucional SENA (HSGS Edition)
         self.sena_green = "#39A900"
         self.sena_dark = "#2D5A27"
-        self.sena_orange = "#FF6B00"
-        self.white = "#FFFFFF"
 
-        self.db = InventarioDB()
+        # CONTENEDOR MAESTRO (Intercambio de pantallas)
+        self.main_container = tk.Frame(self.root, bg="#F0F2F5")
+        self.main_container.pack(fill="both", expand=True)
 
-        # --- HEADER CON CANVAS (Efecto Moderno) ---
-        self.header_canvas = tk.Canvas(self.root, height=100, bg=self.sena_green, highlightthickness=0)
-        self.header_canvas.pack(fill="x")
+        self.mostrar_inicio()
+
+    def limpiar_pantalla(self):
+        for widget in self.main_container.winfo_children():
+            widget.destroy()
+
+    # --- VISTA 1: INICIO ---
+    def mostrar_inicio(self):
+        self.limpiar_pantalla()
+        f = tk.Frame(self.main_container, bg="white")
+        f.place(relx=0.5, rely=0.5, anchor="center", width=500, height=400)
+        tk.Label(f, text="GATEWAY HSGS", font=("Segoe UI", 20, "bold"), bg="white", fg=self.sena_dark).pack(pady=40)
+        tk.Button(f, text="💻 TERMINAL APRENDICES", bg=self.sena_green, fg="white", font=("bold", 12), width=30, height=2, command=self.mostrar_terminal).pack(pady=10)
+        tk.Button(f, text="🔐 PANEL ADMINISTRATIVO", bg="#333333", fg="white", font=("bold", 12), width=30, height=2, command=self.mostrar_login).pack(pady=10)
+
+    # --- VISTA 2: TERMINAL (CON VALIDACIÓN DE PAPELERA) ---
+    def mostrar_terminal(self):
+        self.limpiar_pantalla()
+        head = tk.Frame(self.main_container, bg=self.sena_green, height=60); head.pack(fill="x")
+        tk.Button(head, text="⬅ VOLVER", bg=self.sena_dark, fg="white", command=self.mostrar_inicio).pack(side="left", padx=10, pady=15)
         
-        # Dibujamos un diseño decorativo en el canvas
-        self.header_canvas.create_rectangle(0, 0, 2000, 100, fill=self.sena_green, outline="")
-        self.header_canvas.create_polygon(800, 0, 1100, 0, 1100, 100, 950, 100, fill="#329200", outline="")
+        f = tk.Frame(self.main_container, bg="white", padx=50, pady=50)
+        f.place(relx=0.5, rely=0.5, anchor="center", width=600, height=550)
+        tk.Label(f, text="REGISTRO DE ASISTENCIA", font=("bold", 18), bg="white").pack(pady=20)
+        self.ent_doc = tk.Entry(f, font=("Segoe UI", 24), bd=2, relief="solid", justify="center")
+        self.ent_doc.pack(pady=20, fill="x")
+
+        def cmd_entrada():
+            doc = self.ent_doc.get()
+            if not doc: return
+            # Validar existencia/papelera
+            self.db.cursor.execute("SELECT documento FROM estudiantes WHERE documento=%s", (doc,))
+            if not self.db.cursor.fetchone():
+                self.db.cursor.execute("SELECT documento FROM estudiantes_eliminados WHERE documento=%s", (doc,))
+                if self.db.cursor.fetchone():
+                    messagebox.showwarning("HSGS", "⚠️ El aprendiz está en la PAPELERA. Contacte al administrador.")
+                else:
+                    messagebox.showerror("HSGS", "❌ El aprendiz NO existe en el sistema.")
+                return
+
+            self.db.cursor.execute("SELECT id_asistencia FROM asistencias WHERE documento_estudiante=%s AND fecha_salida IS NULL", (doc,))
+            if self.db.cursor.fetchone():
+                messagebox.showwarning("HSGS", "⚠️ Ya tienes una entrada activa. Registra SALIDA primero.")
+                return
+            if self.db.insertar(doc, 1):
+                messagebox.showinfo("HSGS", "✅ Entrada Exitosa"); self.ent_doc.delete(0, tk.END)
+
+        def cmd_salida():
+            doc = self.ent_doc.get()
+            self.db.cursor.execute("SELECT id_asistencia FROM asistencias WHERE documento_estudiante=%s AND fecha_salida IS NULL", (doc,))
+            res = self.db.cursor.fetchone()
+            if res:
+                self.db.cursor.execute("UPDATE asistencias SET fecha_salida=NOW() WHERE id_asistencia=%s", (res['id_asistencia'],))
+                self.db.conexion.commit(); messagebox.showinfo("HSGS", "✅ Salida Exitosa"); self.ent_doc.delete(0, tk.END)
+            else: messagebox.showerror("HSGS", "No tienes entradas pendientes para este documento.")
+
+        tk.Button(f, text="📥 ENTRADA", bg=self.sena_green, fg="white", font=("bold", 14), height=2, command=cmd_entrada).pack(fill="x", pady=10)
+        tk.Button(f, text="📤 SALIDA", bg=self.sena_dark, fg="white", font=("bold", 14), height=2, command=cmd_salida).pack(fill="x", pady=10)
+
+    # --- VISTA 3: LOGIN ---
+    def mostrar_login(self):
+        self.limpiar_pantalla()
+        f = tk.Frame(self.main_container, bg="white")
+        f.place(relx=0.5, rely=0.5, anchor="center", width=400, height=450)
+        tk.Button(f, text="❌ CANCELAR", bg="#cc0000", fg="white", command=self.mostrar_inicio).pack(anchor="e", padx=10, pady=10)
+        tk.Label(f, text="LOGIN ADMIN", font=("bold", 16), bg="white").pack(pady=20)
+        tk.Label(f, text="Usuario:").pack(); u_ent = tk.Entry(f); u_ent.pack(pady=5)
+        tk.Label(f, text="Contraseña:").pack(); p_ent = tk.Entry(f, show="*"); p_ent.pack(pady=5)
+
+        def intentar_login():
+            self.db.cursor.execute("SELECT * FROM usuarios_admin WHERE usuario=%s AND password=%s", (u_ent.get(), p_ent.get()))
+            if self.db.cursor.fetchone(): self.mostrar_panel_admin()
+            else: messagebox.showerror("HSGS", "Usuario o clave incorrecta")
+        tk.Button(f, text="INGRESAR", bg="#333333", fg="white", width=20, height=2, command=intentar_login).pack(pady=30)
+
+    # --- VISTA 4: PANEL ADMIN (SUITE COMPLETA) ---
+    def mostrar_panel_admin(self):
+        self.limpiar_pantalla()
+        head = tk.Frame(self.main_container, bg=self.sena_dark, height=60); head.pack(fill="x")
+        tk.Label(head, text="PANEL ADMINISTRATIVO HSGS", fg="white", bg=self.sena_dark, font=("bold", 12)).pack(side="left", padx=20)
+        tk.Button(head, text="🔒 SALIR", bg="#444", fg="white", command=self.mostrar_inicio).pack(side="right", padx=10, pady=15)
+
+        nb = ttk.Notebook(self.main_container)
+        nb.pack(fill="both", expand=True, padx=10, pady=10)
+
+        t_asis = tk.Frame(nb, bg="white"); nb.add(t_asis, text=" 🕒 HISTORIAL ")
+        t_gest = tk.Frame(nb, bg="white"); nb.add(t_gest, text=" 👥 GESTIÓN ")
+        t_reg  = tk.Frame(nb, bg="white"); nb.add(t_reg,  text=" 📝 REGISTRO ")
+        t_pap  = tk.Frame(nb, bg="white"); nb.add(t_pap,  text=" 🗑️ PAPELERA ")
+
+        # --- LÓGICA ASISTENCIA ---
+        def refresh_asis():
+            for i in tv_asis.get_children(): tv_asis.delete(i)
+            q = "SELECT a.id_asistencia, a.documento_estudiante, e.id_ficha, a.fecha_registro, a.fecha_salida FROM asistencias a JOIN estudiantes e ON a.documento_estudiante = e.documento ORDER BY a.fecha_registro DESC"
+            self.db.cursor.execute(q)
+            for r in self.db.cursor.fetchall():
+                tv_asis.insert("", "end", values=(f"E-{r['id_asistencia']}", f"S-{r['id_asistencia']}" if r['fecha_salida'] else "---", r['documento_estudiante'], r['id_ficha'], r['fecha_registro']))
+
+        cols = ("ID_E", "ID_S", "DOC", "FICHA", "FECHA")
+        tv_asis = ttk.Treeview(t_asis, columns=cols, show="headings")
+        for c in cols: tv_asis.heading(c, text=c); tv_asis.column(c, anchor="center")
+        tv_asis.pack(fill="both", expand=True, padx=10, pady=10)
+        tk.Button(t_asis, text="🔄 ACTUALIZAR", command=refresh_asis).pack(pady=5); refresh_asis()
+
+        # --- LÓGICA GESTIÓN (FILTROS COMUNICATIVOS) ---
+        f_bus = tk.Frame(t_gest, bg="white", pady=10); f_bus.pack(fill="x", padx=20)
+        var_f = tk.StringVar(value="aprendiz")
+        tk.Radiobutton(f_bus, text="Aprendiz", variable=var_f, value="aprendiz", bg="white").pack(side="left")
+        tk.Radiobutton(f_bus, text="Ficha", variable=var_f, value="ficha", bg="white").pack(side="left", padx=10)
+        ent_bus = tk.Entry(f_bus, width=30, bd=1, relief="solid"); ent_bus.pack(side="left", padx=10)
+
+        tv_gest = ttk.Treeview(t_gest, columns=("DOC", "NOM", "FICHA"), show="headings")
+        for c in ("DOC", "NOM", "FICHA"): tv_gest.heading(c, text=c); tv_gest.column(c, anchor="center")
+        tv_gest.pack(fill="both", expand=True, padx=20)
+
+        def filtrar():
+            for i in tv_gest.get_children(): tv_gest.delete(i)
+            val = f"%{ent_bus.get()}%"
+            q = "SELECT documento, nombre_completo, id_ficha FROM estudiantes WHERE " + ("id_ficha LIKE %s" if var_f.get() == "ficha" else "documento LIKE %s OR nombre_completo LIKE %s")
+            self.db.cursor.execute(q, (val,) if var_f.get() == "ficha" else (val, val))
+            res = self.db.cursor.fetchall()
+            if not res: messagebox.showinfo("HSGS", "🔍 No se encontraron coincidencias.")
+            else:
+                for r in res: tv_gest.insert("", "end", values=(r['documento'], r['nombre_completo'], r['id_ficha']))
+
+        def mandar_papelera():
+            sel = tv_gest.selection()
+            if not sel: return
+            doc = tv_gest.item(sel)['values'][0]
+            if messagebox.askyesno("HSGS", f"¿Mover a {doc} a la papelera?"):
+                # Se incluyen TODAS las columnas (5) para evitar el error 1136
+                self.db.cursor.execute("INSERT INTO estudiantes_eliminados (documento, nombre_completo, correo, id_ficha, fecha_eliminacion) SELECT documento, nombre_completo, correo, id_ficha, NOW() FROM estudiantes WHERE documento=%s", (doc,))
+                self.db.cursor.execute("DELETE FROM estudiantes WHERE documento=%s", (doc,))
+                self.db.conexion.commit(); filtrar(); refresh_pap()
+
+        tk.Button(f_bus, text="🔍 BUSCAR", command=filtrar).pack(side="left")
+        tk.Button(t_gest, text="🗑️ ENVIAR A PAPELERA", bg="#dc3545", fg="white", command=mandar_papelera).pack(pady=10)
+
+        # --- LÓGICA REGISTRO (CON CORREO Y DETALLES DE ERROR) ---
+        f1 = tk.LabelFrame(t_reg, text=" REGISTRO MANUAL ", bg="white", padx=20, pady=20); f1.pack(pady=20, padx=50, fill="x")
+        ins = {}
+        campos = ["Documento", "Nombre Completo", "Correo", "ID Ficha"]
+        for i, k in enumerate(campos):
+            tk.Label(f1, text=k, bg="white").grid(row=0, column=i, padx=5)
+            e = tk.Entry(f1, bd=1, relief="solid"); e.grid(row=1, column=i, padx=5); ins[k] = e
         
-        self.header_canvas.create_text(50, 50, text="SREE", font=("Segoe UI", 32, "bold"), fill="white", anchor="w")
-        self.header_canvas.create_text(170, 55, text="High Softwares From Gravis Systems", 
-                                      font=("Segoe UI", 10, "italic"), fill="#E0E0E0", anchor="w")
+        def save_one():
+            vals = [ins[k].get() for k in campos]
+            if "" in vals: messagebox.showwarning("HSGS", "Todos los campos son obligatorios."); return
+            try:
+                self.db.cursor.execute("INSERT INTO estudiantes (documento, nombre_completo, correo, id_ficha) VALUES (%s, %s, %s, %s)", tuple(vals))
+                self.db.conexion.commit(); messagebox.showinfo("HSGS", "✅ Guardado."); [e.delete(0, tk.END) for e in ins.values()]
+            except Exception as e:
+                messagebox.showerror("HSGS Error", f"❌ No se pudo guardar.\nDetalle: {str(e)}\n\n(Verifique si el documento ya existe o la ficha es válida)")
+        tk.Button(f1, text="💾 GUARDAR", bg=self.sena_green, fg="white", command=save_one).grid(row=1, column=4, padx=10)
 
-        # --- CONTENEDOR PRINCIPAL ---
-        self.container = tk.Frame(self.root, bg="#F0F2F5", padx=20, pady=20)
-        self.container.pack(fill="both", expand=True)
+        def load_ex():
+            path = filedialog.askopenfilename(filetypes=[("Excel", "*.xlsx"), ("CSV", "*.csv")])
+            if path:
+                df = pd.read_excel(path) if path.endswith('.xlsx') else pd.read_csv(path)
+                for _, r in df.iterrows():
+                    self.db.cursor.execute("INSERT IGNORE INTO estudiantes (documento, nombre_completo, correo, id_ficha) VALUES (%s, %s, %s, %s)", (r['documento'], r['nombre_completo'], r['correo'], r['id_ficha']))
+                self.db.conexion.commit(); messagebox.showinfo("HSGS", "✅ Importación finalizada.")
 
-        # --- PANEL IZQUIERDO: REGISTRO RÁPIDO ---
-        self.left_panel = tk.Frame(self.container, bg=self.white, bd=0, padx=20, pady=20)
-        self.left_panel.place(x=0, y=0, width=350, height=540)
+        tk.Button(t_reg, text="📂 IMPORTAR EXCEL/CSV", bg=self.sena_dark, fg="white", command=load_ex).pack(pady=10)
+
+        # --- LÓGICA PAPELERA (CON BORRADO PERMANENTE) ---
+        tv_pap = ttk.Treeview(t_pap, columns=("DOC", "NOM"), show="headings")
+        tv_pap.heading("DOC", text="DOC"); tv_pap.heading("NOM", text="NOMBRE"); tv_pap.pack(fill="both", expand=True, padx=20, pady=10)
         
-        # Sombra simulada (Canvas pequeño)
-        tk.Label(self.left_panel, text="REGISTRO DE ENTRADA", font=("Segoe UI", 14, "bold"), 
-                 bg=self.white, fg=self.sena_dark).pack(pady=(0, 20))
-
-        # Campos
-        self.fields = {}
-        for label_text in ["Documento Aprendiz:", "ID Competencia:"]:
-            tk.Label(self.left_panel, text=label_text, bg=self.white, font=("Segoe UI", 10)).pack(anchor="w")
-            entry = tk.Entry(self.left_panel, font=("Segoe UI", 12), bd=1, relief="solid")
-            entry.pack(fill="x", pady=(5, 15))
-            self.fields[label_text] = entry
-
-        # Botón de Registro con Canvas (Estilo botón moderno)
-        self.btn_reg_canvas = tk.Canvas(self.left_panel, width=280, height=50, bg=self.white, highlightthickness=0, cursor="hand2")
-        self.btn_reg_canvas.pack(pady=10)
-        self.draw_button(self.btn_reg_canvas, self.sena_green, "REGISTRAR ENTRADA")
-        self.btn_reg_canvas.bind("<Button-1>", lambda e: self.registrar_asistencia())
-
-        # Separador decorativo
-        tk.Frame(self.left_panel, height=2, bg="#EEEEEE").pack(fill="x", pady=20)
-
-        # Botón de Limpiar
-        tk.Button(self.left_panel, text="Limpiar Campos", font=("Segoe UI", 9), bg="#F5F5F5", 
-                  relief="flat", command=self.limpiar).pack(fill="x")
-
-        # --- PANEL DERECHO: VISUALIZACIÓN ---
-        self.right_panel = tk.Frame(self.container, bg="#F0F2F5")
-        self.right_panel.place(x=370, y=0, width=690, height=540)
-
-        # Tabla con estilo
-        self.style = ttk.Style()
-        self.style.theme_use("clam")
-        self.style.configure("Treeview", rowheight=30, font=("Segoe UI", 9), borderwidth=0)
-        self.style.configure("Treeview.Heading", background="#EFEFEF", font=("Segoe UI", 10, "bold"), relief="flat")
-
-        self.tree_frame = tk.Frame(self.right_panel, bg=self.white, bd=1, relief="solid")
-        self.tree_frame.pack(fill="both", expand=True)
-
-        cols = ("ID", "DOCUMENTO", "COMPETENCIA", "FECHA/HORA")
-        self.tabla = ttk.Treeview(self.tree_frame, columns=cols, show="headings")
-        for c in cols:
-            self.tabla.heading(c, text=c)
-            self.tabla.column(c, anchor="center")
+        def refresh_pap():
+            for i in tv_pap.get_children(): tv_pap.delete(i)
+            self.db.cursor.execute("SELECT documento, nombre_completo FROM estudiantes_eliminados")
+            for r in self.db.cursor.fetchall(): tv_pap.insert("", "end", values=(r['documento'], r['nombre_completo']))
         
-        self.tabla.pack(side="left", fill="both", expand=True)
-        
-        # Scrollbar
-        sc = ttk.Scrollbar(self.tree_frame, orient="vertical", command=self.tabla.yview)
-        self.tabla.configure(yscrollcommand=sc.set)
-        sc.pack(side="right", fill="y")
+        def restaurar():
+            sel = tv_pap.selection()
+            if sel:
+                d = tv_pap.item(sel)['values'][0]
+                self.db.cursor.execute("INSERT INTO estudiantes (documento, nombre_completo, correo, id_ficha) SELECT documento, nombre_completo, correo, id_ficha FROM estudiantes_eliminados WHERE documento=%s", (d,))
+                self.db.cursor.execute("DELETE FROM estudiantes_eliminados WHERE documento=%s", (d,))
+                self.db.conexion.commit(); refresh_pap(); filtrar()
 
-        # --- PANEL INFERIOR: ACCIONES DE MARCA ---
-        self.footer = tk.Frame(self.root, bg=self.white, height=60)
-        self.footer.pack(fill="x", side="bottom")
-        
-        tk.Label(self.footer, text=f"© 2026 High Softwares From Gravis Systems | Desarrollado por: {self.get_user_name()}", 
-                 bg=self.white, fg="#999999", font=("Segoe UI", 9)).pack(pady=10)
+        def hard_delete():
+            sel = tv_pap.selection()
+            if sel:
+                d = tv_pap.item(sel)['values'][0]
+                if messagebox.askyesno("HSGS CRÍTICO", f"¿Borrar PERMANENTEMENTE a {d}?\nEsta acción es irreversible."):
+                    self.db.cursor.execute("DELETE FROM estudiantes_eliminados WHERE documento=%s", (d,))
+                    self.db.conexion.commit(); refresh_pap()
 
-    def draw_button(self, canvas, color, text):
-        canvas.create_rectangle(0, 0, 280, 50, fill=color, outline="", tags="rect")
-        canvas.create_text(140, 25, text=text, fill="white", font=("Segoe UI", 11, "bold"), tags="text")
-
-    def get_user_name(self):
-        return "GRAVIS LUDIO"
-
-    def limpiar(self):
-        for e in self.fields.values(): e.delete(0, tk.END)
-
-    def registrar_asistencia(self):
-        doc = self.fields["Documento Aprendiz:"].get()
-        comp = self.fields["ID Competencia:"].get()
-        
-        if not doc or not comp:
-            messagebox.showwarning("HSGS", "Por favor complete los campos.")
-            return
-
-        # Lógica de inserción en SQL
-        query = "INSERT INTO asistencias (documento_estudiante, id_competencia) VALUES (%s, %s)"
-        try:
-            self.db.cursor.execute(query, (doc, comp))
-            self.db.conexion.commit()
-            messagebox.showinfo("HSGS", f"Entrada registrada para: {doc}")
-            self.cargar_datos()
-            self.limpiar()
-        except Exception as e:
-            messagebox.showerror("Error HSGS", f"No se pudo registrar: {e}")
-
-    def cargar_datos(self):
-        for i in self.tabla.get_children(): self.tabla.delete(i)
-        self.db.cursor.execute("SELECT id_asistencia, documento_estudiante, id_competencia, fecha_registro FROM asistencias ORDER BY fecha_registro DESC")
-        for r in self.db.cursor.fetchall():
-            self.tabla.insert("", "end", values=r)
+        f_btn_p = tk.Frame(t_pap, bg="white"); f_btn_p.pack(pady=5)
+        tk.Button(f_btn_p, text="♻️ RESTAURAR", bg=self.sena_green, fg="white", command=restaurar).pack(side="left", padx=10)
+        tk.Button(f_btn_p, text="🔥 ELIMINAR PERMANENTE", bg="black", fg="white", command=hard_delete).pack(side="left", padx=10)
+        tk.Button(t_pap, text="🔄 ACTUALIZAR", command=refresh_pap).pack(pady=5); refresh_pap()
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = SREE_HSGS(root)
+    app = SistemaHSGS(root)
     root.mainloop()
