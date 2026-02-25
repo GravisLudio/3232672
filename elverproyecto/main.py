@@ -13,9 +13,27 @@ ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("green") 
 
 class SistemaHSGS:
+    # Descripción de la clase:
+    # SistemaHSGS es la interfaz gráfica principal (GUI) de la aplicación Chronos Registry System.
+    # Responsabilidades principales:
+    # - Inicializar recursos (base de datos, servicios, estilos visuales)
+    # - Gestionar la navegación entre vistas (gateway, terminal, perfil, panel admin)
+    # - Proveer vistas para: terminal de marcación, acceso de aprendices, panel administrativo
+    # - Manejar animaciones iniciales y ventanas modales (cambio de contraseña)
+    #
+    # Organización por bloques (métodos relacionados):
+    # 1) Inicialización: `__init__`, `lanzar_sistema`.
+    # 2) Utilidades de UI: `limpiar_pantalla`.
+    # 3) Animaciones de entrada: `animacion_entrada_pro`, `animar_ciclo`, `efecto_pop`.
+    # 4) Vistas principales: `mostrar_inicio`, `mostrar_terminal`, `login_aprendiz_view`,
+    #    `mostrar_panel_aprendiz`, `mostrar_login`, `mostrar_panel_admin_ui`.
+    # 5) Seguridad: `actualizar_password_ventana`.
+    #
+    # Comentarios dentro de cada método explican el propósito de cada bloque UI y
+    # la lógica asociada; el código original se mantiene para no alterar el comportamiento.
     def __init__(self, root):
         self.root = root
-        self.root.title("C.R.G - Chronos Registry System")
+        self.root.title("C.R.S - Chronos Registry System")
         
         # Inicializar base de datos
         self.db = InventarioDB()
@@ -35,25 +53,35 @@ class SistemaHSGS:
         self.root.after(100, self.lanzar_sistema)
 
     def lanzar_sistema(self):
+        # Descripción: muestra la ventana principal después de la inicialización y
+        # pone la ventana en estado maximizado. Luego inicia la animación de entrada.
         self.root.deiconify() 
         self.root.state('zoomed') 
         self.animacion_entrada_pro()
 
     def limpiar_pantalla(self):
+        # Utilidad: elimina todos los widgets hijos del contenedor principal.
+        # Se usa antes de renderizar cada vista para evitar superposiciones.
         for widget in self.main_container.winfo_children():
             widget.destroy()
 
     # --- ANIMACIÓN: EFECTO ENFOQUE + POP ---
     def animacion_entrada_pro(self):
+        # Bloque de animación de entrada (intro): crea un frame central con
+        # un label que crecerá en tamaño para dar un efecto de enfoque.
+        # Se delega el bucle de crecimiento a `animar_ciclo`.
         self.limpiar_pantalla()
         self.f_intro = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.f_intro.place(relx=0.5, rely=0.5, anchor="center")
-        self.lbl_siglas = ctk.CTkLabel(self.f_intro, text="C.R.G", font=("Segoe UI", 10, "bold"), text_color="#D1D1D1")
+        self.lbl_siglas = ctk.CTkLabel(self.f_intro, text="C.R.S", font=("Segoe UI", 10, "bold"), text_color="#D1D1D1")
         self.lbl_siglas.pack()
         self.size_actual = 10
         self.root.after(500, self.animar_ciclo)
 
     def animar_ciclo(self):
+        # Bucle de animación: incrementa `size_actual` para escalar el texto.
+        # Cambia el color progresivamente y, al finalizar, añade un subtítulo
+        # y lanza el `efecto_pop` para el texto secundario.
         if self.size_actual < 120:
             self.size_actual += 3
             if self.size_actual > 60: self.lbl_siglas.configure(text_color=self.sena_dark)
@@ -66,6 +94,8 @@ class SistemaHSGS:
             self.efecto_pop(1)
 
     def efecto_pop(self, size):
+        # Efecto visual: aumenta el tamaño del label secundario hasta un tope
+        # para dar un pequeño 'pop' y, tras una pausa, navegar a la vista inicio.
         if size < 22:
             size += 2
             self.lbl_nombre.configure(font=("Segoe UI", size, "bold"))
@@ -75,10 +105,14 @@ class SistemaHSGS:
 
     # --- VISTA 1: GATEWAY ---
     def mostrar_inicio(self):
+        # Vista 'Gateway' principal: punto de entrada para las tres rutas
+        # - Terminal de aprendices (marcar entrada/salida)
+        # - Panel administrativo (requiere login)
+        # - Acceso a perfil de aprendiz (login aprendiz)
         self.limpiar_pantalla()
         f = ctk.CTkFrame(self.main_container, width=500, height=550, corner_radius=20, fg_color="white", border_width=1, border_color="#E0E0E0")
         f.place(relx=0.5, rely=0.5, anchor="center")
-        ctk.CTkLabel(f, text="GATEWAY C.R.G", font=("Segoe UI", 32, "bold"), text_color=self.sena_dark).pack(pady=(50, 5))
+        ctk.CTkLabel(f, text="GATEWAY C.R.S", font=("Segoe UI", 32, "bold"), text_color=self.sena_dark).pack(pady=(50, 5))
         ctk.CTkLabel(f, text="Chronos Registry System | High Softwares", font=("Segoe UI", 13), text_color="#888").pack(pady=(0, 40))
         ctk.CTkButton(f, text="💻 TERMINAL APRENDICES", height=55, width=350, corner_radius=10, command=self.mostrar_terminal).pack(pady=10)
         ctk.CTkButton(f, text="🔐 PANEL ADMINISTRATIVO", height=55, width=350, corner_radius=10, fg_color="#333", hover_color="#1a1a1a", command=self.mostrar_login).pack(pady=10)
@@ -86,6 +120,9 @@ class SistemaHSGS:
 
     # --- VISTA 2: TERMINAL ---
     def mostrar_terminal(self):
+        # Vista Terminal: interfaz simplificada para marcar entrada/salida
+        # - `ent_doc` es el entry donde se ingresa el documento
+        # - `procesar` delega a `AsistenciaService` para registrar entrada/salida
         self.limpiar_pantalla()
         head = ctk.CTkFrame(self.main_container, height=70, corner_radius=0, fg_color=self.sena_green); head.pack(fill="x")
         ctk.CTkButton(head, text="⬅ VOLVER", width=140, fg_color=self.sena_dark, command=self.mostrar_inicio).pack(side="left", padx=25, pady=15)
@@ -94,8 +131,9 @@ class SistemaHSGS:
         ent_doc = ctk.CTkEntry(f, font=("Segoe UI", 30), width=480, height=80, placeholder_text="N° Documento", justify="center"); ent_doc.pack(pady=25); ent_doc.focus()
 
         def procesar(tipo):
+            # Lógica de negocio: intenta registrar entrada o salida según `tipo`
             exito, msg = self.servicio.registrar_entrada(ent_doc.get()) if tipo=="in" else self.servicio.registrar_salida(ent_doc.get())
-            if exito: messagebox.showinfo("C.R.G", msg); ent_doc.delete(0, tk.END)
+            if exito: messagebox.showinfo("C.R.S", msg); ent_doc.delete(0, tk.END)
             else: messagebox.showwarning("Atención", msg)
 
         ctk.CTkButton(f, text="📥 MARCAR ENTRADA", font=("bold", 16), height=65, width=450, command=lambda:procesar("in")).pack(pady=10)
@@ -103,6 +141,8 @@ class SistemaHSGS:
 
     # --- VISTA 3: PERFIL APRENDIZ ---
     def login_aprendiz_view(self):
+        # Vista de login para aprendices. Valida credenciales via `AsistenciaService`.
+        # Si el usuario debe cambiar contraseña, abre la ventana de actualización.
         self.limpiar_pantalla()
         f = ctk.CTkFrame(self.main_container, width=450, height=480, corner_radius=25, fg_color="white"); f.place(relx=0.5, rely=0.5, anchor="center")
         ctk.CTkLabel(f, text="ACCESO APRENDIZ", font=("Segoe UI", 24, "bold")).pack(pady=35)
@@ -110,6 +150,7 @@ class SistemaHSGS:
         p_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Contraseña", show="*"); p_ent.pack(pady=12)
 
         def entrar():
+            # Delegar autenticación al servicio; en caso de success navegar al panel.
             user = self.servicio.login_aprendiz(u_ent.get(), p_ent.get())
             if user:
                 if user.get('cambio_pass') == 0 or p_ent.get() == 'sena123': self.actualizar_password_ventana(user['documento'])
@@ -120,6 +161,10 @@ class SistemaHSGS:
         ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack()
 
     def mostrar_panel_aprendiz(self, user):
+        # Panel del aprendiz: muestra un calendario y la actividad del día.
+        # - Left: calendario interactivo (selección de fecha)
+        # - Right: resumen / tarjetas con registros de entrada/salida del día seleccionado
+        # La función `actualizar_cards` consulta `AsistenciaService` para obtener los registros.
         self.limpiar_pantalla()
         head = ctk.CTkFrame(self.main_container, height=75, corner_radius=0, fg_color="white", border_width=1, border_color="#EEE"); head.pack(fill="x")
         ctk.CTkButton(head, text="🚪 CERRAR SESIÓN", fg_color="#FF5252", hover_color="#D32F2F", command=self.mostrar_inicio).pack(side="left", padx=25)
@@ -134,6 +179,7 @@ class SistemaHSGS:
         container_cards = ctk.CTkScrollableFrame(right, fg_color="transparent"); container_cards.pack(fill="both", expand=True, padx=12, pady=8)
 
         def actualizar_cards(e=None):
+            # Limpia las tarjetas y solicita registros al servicio por fecha seleccionada.
             for w in container_cards.winfo_children(): w.destroy()
             fecha = cal.selection_get()
             regs = self.servicio.obtener_registros_dia(user['documento'], fecha) # Lógica restaurada
@@ -160,14 +206,17 @@ class SistemaHSGS:
         ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack()
 
     def mostrar_panel_admin_ui(self):
+        # Panel administrativo: contiene pestañas para historial, gestión, registro y papelera.
+        # Cada sección usa consultas SQL directas a la conexión establecida y funcionalidades
+        # del `AsistenciaService` para operaciones de negocio (mover a papelera, restaurar, importar excel, etc).
         self.limpiar_pantalla()
         head = ctk.CTkFrame(self.main_container, height=75, corner_radius=0, fg_color=self.sena_dark); head.pack(fill="x")
-        ctk.CTkLabel(head, text="C.R.G - GESTIÓN ADMINISTRATIVA", font=("Segoe UI", 18, "bold"), text_color="white").pack(side="left", padx=30)
+        ctk.CTkLabel(head, text="C.R.S - GESTIÓN ADMINISTRATIVA", font=("Segoe UI", 18, "bold"), text_color="white").pack(side="left", padx=30)
         ctk.CTkButton(head, text="🔒 CERRAR", fg_color="#444", command=self.mostrar_inicio).pack(side="right", padx=25)
         tabview = ctk.CTkTabview(self.main_container, segmented_button_selected_color=self.sena_green); tabview.pack(fill="both", expand=True, padx=25, pady=15)
         t_asis = tabview.add("🕒 HISTORIAL"); t_gest = tabview.add("👥 GESTIÓN"); t_reg = tabview.add("📝 REGISTRO"); t_pap = tabview.add("🗑️ PAPELERA")
 
-        # Historial
+        # -- Historial: consulta y muestra últimas asistencias --
         def refresh_asis():
             for i in tv_asis.get_children(): tv_asis.delete(i)
             self.db.cursor.execute("SELECT a.id_asistencia, a.documento_estudiante, e.nombre_completo, a.fecha_registro, a.fecha_salida FROM asistencias a JOIN estudiantes e ON a.documento_estudiante = e.documento ORDER BY a.fecha_registro DESC LIMIT 100")
@@ -177,12 +226,13 @@ class SistemaHSGS:
         tv_f1 = tk.Frame(t_asis, bg="white"); tv_f1.pack(fill="both", expand=True, padx=12, pady=12)
         tv_asis = ttk.Treeview(tv_f1, columns=("DOC", "NOMBRE", "IN", "OUT"), show="headings"); [tv_asis.heading(c, text=c) for c in ("DOC", "NOMBRE", "IN", "OUT")]; tv_asis.pack(fill="both", expand=True); refresh_asis()
 
-        # Gestión
+        # -- Gestión: búsqueda y operaciones sobre aprendices --
         f_bus = ctk.CTkFrame(t_gest, fg_color="transparent"); f_bus.pack(fill="x", padx=20, pady=15)
         ent_bus = ctk.CTkEntry(f_bus, placeholder_text="Buscar aprendiz...", width=420); ent_bus.pack(side="left", padx=10)
         tv_f2 = tk.Frame(t_gest, bg="white"); tv_f2.pack(fill="both", expand=True, padx=20)
         tv_gest = ttk.Treeview(tv_f2, columns=("DOC", "NOMBRE", "FICHA"), show="headings"); [tv_gest.heading(c, text=c) for c in ("DOC", "NOMBRE", "FICHA")]; tv_gest.pack(fill="both", expand=True)
         def filtrar():
+            # Filtra estudiantes por documento o nombre usando LIKE
             for i in tv_gest.get_children(): tv_gest.delete(i)
             v = f"%{ent_bus.get()}%"
             self.db.cursor.execute("SELECT documento, nombre_completo, id_ficha FROM estudiantes WHERE documento LIKE %s OR nombre_completo LIKE %s", (v, v))
@@ -190,7 +240,7 @@ class SistemaHSGS:
         ctk.CTkButton(f_bus, text="🔍 FILTRAR", width=120, command=filtrar).pack(side="left"); filtrar()
         ctk.CTkButton(t_gest, text="🗑️ MOVER A PAPELERA", fg_color="#E74C3C", command=lambda: [self.servicio.mandar_a_papelera(tv_gest.item(tv_gest.selection())['values'][0]), filtrar(), refresh_pap()] if tv_gest.selection() else None).pack(pady=10)
 
-        # Registro
+        # -- Registro: formulario manual y carga por Excel --
         f_reg_m = ctk.CTkFrame(t_reg, corner_radius=20, fg_color="white", border_width=1, border_color="#EEE"); f_reg_m.pack(pady=20, padx=50, fill="x")
         grid_f = tk.Frame(f_reg_m, bg="white"); grid_f.pack(pady=20, padx=25)
         fields = ["Documento", "Nombre Completo", "Correo"]; entries = {}
@@ -199,12 +249,13 @@ class SistemaHSGS:
             e = ctk.CTkEntry(grid_f, width=190); e.grid(row=1, column=i, padx=5, pady=5); entries[l] = e
         cb_f = ttk.Combobox(grid_f, state="readonly", width=40); cb_f.grid(row=1, column=3, padx=12); cb_f['values'] = [f"{f['id_ficha']} | {f['codigo_ficha']}" for f in self.servicio.obtener_fichas()]
         def save():
+            # Guarda aprendiz usando el servicio; limpia campos y refresca la lista
             if self.servicio.guardar_aprendiz_manual({k: v.get() for k, v in entries.items()}, cb_f.get().split(" | ")[0] if cb_f.get() else None):
                 messagebox.showinfo("OK", "Registrado"); [v.delete(0, 'end') for v in entries.values()]; filtrar()
         ctk.CTkButton(f_reg_m, text="💾 GUARDAR", command=save).pack(pady=15)
         ctk.CTkButton(t_reg, text="📂 CARGA EXCEL", fg_color="#333", command=self.servicio.importar_excel).pack()
 
-        # Papelera
+        # -- Papelera: listar, restaurar o eliminar permanentemente --
         tv_f3 = tk.Frame(t_pap, bg="white"); tv_f3.pack(fill="both", expand=True, padx=20, pady=12)
         tv_pap = ttk.Treeview(tv_f3, columns=("DOC", "NOMBRE", "FICHA"), show="headings"); [tv_pap.heading(c, text=c) for c in ("DOC", "NOMBRE", "FICHA")]; tv_pap.pack(fill="both", expand=True)
         def refresh_pap():
@@ -217,7 +268,11 @@ class SistemaHSGS:
 
     # --- SEGURIDAD: VALIDACIÓN ROBUSTA ---
     def actualizar_password_ventana(self, documento):
-        v = tk.Toplevel(self.root); v.title("Seguridad C.R.G"); v.geometry("450x520"); v.configure(bg="white"); v.grab_set()
+        # Ventana modal: obliga al aprendiz a cambiar su contraseña conforme a
+        # requisitos mínimos (longitud, mayúscula, minúscula, número).
+        # - Muestra retroalimentación en tiempo real mientras escribe.
+        # - Al guardar, actualiza la DB y marca `cambio_pass=1`.
+        v = tk.Toplevel(self.root); v.title("Seguridad C.R.S"); v.geometry("450x520"); v.configure(bg="white"); v.grab_set()
         tk.Label(v, text="🔒 CAMBIO OBLIGATORIO", font=("bold", 12), bg="white", fg="#d32f2f").pack(pady=10)
         pass_var = tk.StringVar(); e = ttk.Entry(v, show="*", textvariable=pass_var, font=("Segoe UI", 12)); e.pack(pady=10, padx=40, fill="x")
         req_frame = tk.Frame(v, bg="white"); req_frame.pack(pady=10, padx=40, fill="x")
@@ -229,6 +284,7 @@ class SistemaHSGS:
         }
         for lbl in requisitos.values(): lbl.pack(fill="x")
         def validar(*args):
+            # Valida y actualiza el color de cada requisito en tiempo real.
             p = pass_var.get()
             cond = {"long": len(p)>=8, "upper": any(c.isupper() for c in p), "lower": any(c.islower() for c in p), "num": any(c.isdigit() for c in p)}
             for k, c in cond.items(): requisitos[k].config(fg="#39A900" if c else "red")
@@ -237,7 +293,7 @@ class SistemaHSGS:
         def save():
             if validar():
                 self.db.cursor.execute("UPDATE estudiantes SET password=%s, cambio_pass=1 WHERE documento=%s", (pass_var.get(), documento))
-                self.db.conexion.commit(); messagebox.showinfo("C.R.G", "Seguridad configurada"); v.destroy()
+                self.db.conexion.commit(); messagebox.showinfo("C.R.S", "Seguridad configurada"); v.destroy()
         tk.Button(v, text="GUARDAR Y ENTRAR", bg="#39A900", fg="white", command=save).pack(pady=20)
 
 if __name__ == "__main__":
