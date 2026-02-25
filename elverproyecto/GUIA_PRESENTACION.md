@@ -161,6 +161,27 @@ CREATE TABLE estudiantes_eliminados (
 
 ---
 
+## 🎨 Diseño Visual y Animaciones
+
+- Se basa en **CustomTkinter** para componentes modernos con tema
+  claro y botones estilizados.
+- Paleta de colores: verde SENA (`#39A900`), verde oscuro, fondos gris
+  claro y blancos para claridad.
+- **Animación de bienvenida**: cuando la aplicación arranca se ejecuta
+  un efecto de zoom-in en las siglas "C.R.S" seguido de un pequeño
+  pop en el subtítulo. Se implementa completamente en código dentro de
+  `animacion_entrada_pro()`, `animar_ciclo()` y `efecto_pop()`.
+  La versión actual usa un **easing dinámico** (paso proporcional a la
+  distancia restante) y retardos de 10 ms que eliminan cualquier sensación
+  de lag o salto. El subtítulo también crece con easing, lo que da un
+  acabado más profesional.
+- Transiciones internas: antes de dibujar cada nueva vista se llama a
+  `limpiar_pantalla()` para eliminar widgets anteriores y evitar
+  superposiciones.
+
+---
+
+
 ### Caso 3: Admin Gestiona Aprendices
 
 ```
@@ -189,6 +210,28 @@ PANEL ADMINISTRATIVO (4 pestañas):
 ---
 
 ## 🔄 Flujos de Datos Principales
+
+### 📈 Diagrama de flujo general
+
+```mermaid
+flowchart TD
+    A[Inicio / Animación] --> B[Gateway]
+    B --> C{Elección}
+    C --> |Terminal| D[Vista Terminal]
+    C --> |Perfil Aprendiz| E[Login Aprendiz]
+    C --> |Panel Admin| F[Login Admin]
+    E --> G[Panel Aprendiz]
+    F --> H[Panel Admin]
+    G --> E
+    H --> F
+    D --> B
+```
+
+La gráfica anterior muestra cómo el usuario puede navegar entre la
+pantalla de bienvenida, el gateway y las distintas rutas (terminal,
+perfil, admin). Las flechas cíclicas indican la posibilidad de volver
+atrás.
+
 
 ### Flujo 1: Registrar Entrada
 
@@ -235,6 +278,46 @@ def insertar(self, documento, id_competencia):
 ---
 
 ## 🔐 Aspectos de Seguridad
+
+### 📝 Auditoría de Administradores
+
+Se añadió un registro `auditoria` en la base de datos para guardar eventos
+clave generados por los usuarios administrativos. Cada registro contiene:
+
+```sql
+CREATE TABLE auditoria (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  usuario VARCHAR(50),
+  accion VARCHAR(100),
+  objeto VARCHAR(100),
+  detalles TEXT,
+  fecha DATETIME DEFAULT NOW()
+);
+```
+
+Las acciones auditadas incluyen:
+- login / logout de admin
+- movimiento a papelera
+- restauración y eliminación permanente
+- importación de archivos Excel
+
+El método `InventarioDB.registrar_auditoria()` encapsula la inserción y se
+llama automáticamente desde la UI cuando un administrador realiza la
+operación.
+
+### 🧩 Mejoras de Usabilidad en el Panel Admin
+
+- ***Selección múltiple*** en las tablas de Gestión y Papelera permite borrar
+  o restaurar varios aprendices de una sola vez.
+- Se muestran **mensajes de confirmación** con conteo cuando se afectan
+  múltiples usuarios.
+- Al eliminar permanentemente, se advierte que la acción es irreversible.
+- El botón de carga de Excel ahora genera un evento de auditoría previo a la
+  importación.
+- En todos los formularios de login (admin y aprendiz) se permite pulsar
+  **Enter** para enviar el formulario, además del botón correspondiente.
+
+## 🔄 Flujos de Datos Principales
 
 ### ✅ Lo Que Se Implementó:
 

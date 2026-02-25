@@ -2,6 +2,23 @@ import mysql.connector
 from mysql.connector import Error
 
 class InventarioDB:
+    """Encapsula la conexión y las operaciones básicas contra MySQL.
+
+    Esta clase se utiliza en toda la aplicación CRS para realizar inserciones,
+    consultas, eliminaciones, cálculos de horas y, ahora, auditoría de acciones
+    administrativas. Al centralizar el acceso a la base de datos evitamos
+    dispersión de sentencias SQL y facilitamos la prueba unitaria.
+
+    Convenciones de la clase:
+    - Cada método comprueba `self.conexion` antes de ejecutar cualquier
+      sentencia. Si la conexión es `None` simplemente retorna un valor
+      neutro (False o lista vacía) para evitar excepciones en cascada.
+    - Los errores se imprimen en consola; la capa de lógica puede reaccionar
+      según el valor de retorno (True/False o lista).
+    - Los métodos actuales cubren: asistencias, búsquedas, borrado y reporte
+      de horas. Se añade un método para registrar eventos de auditoría.
+    """
+
     def __init__(self):
         """Establece la conexión con la base de datos TechSenaHSGS de HSGS."""
         try:
@@ -72,6 +89,54 @@ class InventarioDB:
             self.cursor.close()
             self.conexion.close()
             print("Sesión HSGS finalizada correctamente.")
+
+    # -------------------- NUEVA FUNCIONALIDAD: AUDITORÍA --------------------
+    def registrar_auditoria(self, usuario, accion, objeto="", detalles=""):
+        """Guarda un registro de auditoría en la tabla `auditoria`.
+
+        Parámetros:
+            usuario (str): nombre o identificador del admin que realiza la acción.
+            accion (str): descripción breve de la operación (login, eliminar, etc.).
+            objeto (str): entidad sobre la que se actuó (ej. documento aprendiz).
+            detalles (str): cualquier detalle adicional (por qué, condición, etc.).
+
+        RETORNA:
+            True si la inserción fue exitosa, False en caso contrario.
+
+        NOTA:
+            Asume que existe una tabla `auditoria` con la siguiente estructura:
+
+            CREATE TABLE auditoria (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                usuario VARCHAR(50),
+                accion VARCHAR(100),
+                objeto VARCHAR(100),
+                detalles TEXT,
+                fecha DATETIME DEFAULT NOW()
+            );
+        """
+        if not self.conexion:
+            return False
+        try:
+            # asegurar que exista la tabla de auditoría (solo la primera vez)
+            ddl = ("CREATE TABLE IF NOT EXISTS auditoria ("
+                   "id INT AUTO_INCREMENT PRIMARY KEY,"
+                   "usuario VARCHAR(50),"
+                   "accion VARCHAR(100),"
+                   "objeto VARCHAR(100),"
+                   "detalles TEXT,"
+                   "fecha DATETIME DEFAULT NOW()"
+                   ")")
+            self.cursor.execute(ddl)
+            query = ("INSERT INTO auditoria (usuario, accion, objeto, detalles) "
+                     "VALUES (%s, %s, %s, %s)")
+            self.cursor.execute(query, (usuario, accion, objeto, detalles))
+            self.conexion.commit()
+            return True
+        except Error as e:
+            print(f"Error al registrar auditoría: {e}")
+            return False
+
     def obtener_reporte_horas(self, documento):
         """Calcula el total de horas acumuladas por aprendiz."""
         if not self.conexion: return []

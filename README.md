@@ -21,6 +21,10 @@ Terminal de Aprendices: Un módulo optimizado para el registro rápido de asiste
 
 Panel de Aprendiz (Calendario): Incluye un Calendario Físico (tkcalendar) donde el usuario puede hacer clic en cualquier día para ver sus tarjetas de entrada y salida, además del cálculo automático de horas trabajadas en esa fecha.
 
+**Auditoría**: El sistema registra en la base de datos todas las acciones de administrador (login, logout, mover a papelera, restaurar, eliminación permanente, importación Excel) en la tabla `auditoria`.
+
+**Gestión múltiple**: En el panel administrativo las tablas permiten selección extendida para mover, restaurar o eliminar varios usuarios a la vez; el sistema solicita confirmación cuando se afectan múltiples registros.
+
 Panel Administrativo: Suite completa para la gestión de la base de datos que incluye:
 
 Historial: Visualización de todos los registros del sistema.

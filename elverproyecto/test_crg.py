@@ -488,6 +488,32 @@ class TestRunnerGUI(tk.Tk):
 
 
 # ============================================================================
+# TESTS ADICIONALES: AUDITORÍA
+# ============================================================================
+
+class TestAuditoria(unittest.TestCase):
+    """Verifica que el método de auditoría de InventarioDB registre correctamente."""
+    
+    def setUp(self):
+        self.db = InventarioDB()
+        # sustituimos el cursor para observar ejecuciones
+        self.db.cursor = Mock()
+        self.db.conexion = True
+    
+    def test_registrar_auditoria_valida(self):
+        """Se asegura de que la consulta se construya y ejecute sin errores."""
+        self.db.cursor.execute.return_value = None
+        result = self.db.registrar_auditoria('admin1', 'login admin', 'usuarios', 'credenciales correctas')
+        self.assertTrue(result)
+        self.db.cursor.execute.assert_called()
+    
+    def test_registrar_auditoria_sin_conexion(self):
+        """Si la conexión es falsa debe retornar False."""
+        self.db.conexion = None
+        result = self.db.registrar_auditoria('a', 'accion')
+        self.assertFalse(result)
+
+# ============================================================================
 # SUITE DE PRUEBAS
 # ============================================================================
 
@@ -570,9 +596,9 @@ def mostrar_checklist_manual():
             'tests': [
                 '☐ Buscar por documento → Encuentra aprendiz',
                 '☐ Buscar por nombre → Encuentra aprendiz',
-                '☐ Seleccionar aprendiz → Botón "Mover a Papelera" habilitado',
-                '☐ Mover a papelera → Desaparece de tabla',
-                '☐ Aprendiz aparece en Papelera',
+                '☐ Seleccionar uno o varios aprendices → Botón "Mover a Papelera" habilitado",
+                '☐ Mover a papelera múltiples registros con confirmación',
+                '☐ Aprendices seleccionados aparecen en Papelera',
             ]
         },
         {
@@ -603,9 +629,10 @@ def mostrar_checklist_manual():
             'categoria': 'ADMIN - Papelera',
             'tests': [
                 '☐ Aprendices eliminados aparecen en papelera',
-                '☐ Botón "Restaurar" → Vuelve a tabla activa',
-                '☐ Botón "Eliminar" → Borrado permanente',
-                '☐ Confirmación antes de eliminar permanentemente',
+                '☐ Seleccionar uno o varios registros → Botón "Restaurar" habilitado',
+                '☐ Restaurar múltiples con confirmación',
+                '☐ Seleccionar uno o varios registros → Botón "Eliminar" habilitado',
+                '☐ Confirmación antes de eliminar permanentemente (mensaje ajustado según cantidad)',
                 '☐ Historial de asistencia se preserva después restaurar',
             ]
         },
@@ -620,6 +647,7 @@ def mostrar_checklist_manual():
                 '☐ Requisitos marcados en verde cuando cumplen',
                 '☐ Panel admin requiere usuario/contraseña',
                 '☐ Credenciales admin inválidas → Rechaza acceso',
+                '☐ Acciones importantes generan registros de auditoría (login/logout, movimientos, importaciones)',
             ]
         },
         {
