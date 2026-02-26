@@ -25,9 +25,11 @@ class SistemaHSGS:
         self.servicio = AsistenciaService(self.db)
         self.sena_green = "#39A900"
         self.sena_dark = "#2D5A27"
+        # tono base gris claro para fondos menos brillantes
+        self.bg_light = "#F0F2F5"
 
         # Contenedor Maestro
-        self.main_container = ctk.CTkFrame(self.root, fg_color="#F0F2F5", corner_radius=0)
+        self.main_container = ctk.CTkFrame(self.root, fg_color=self.bg_light, corner_radius=0)
         self.main_container.pack(fill="both", expand=True)
 
         # Forzar ventana maximizada con retraso técnico
@@ -76,20 +78,20 @@ class SistemaHSGS:
     # --- VISTA 1: GATEWAY ---
     def mostrar_inicio(self):
         self.limpiar_pantalla()
-        f = ctk.CTkFrame(self.main_container, width=500, height=550, corner_radius=20, fg_color="white", border_width=1, border_color="#E0E0E0")
+        f = ctk.CTkFrame(self.main_container, width=500, height=550, corner_radius=20, fg_color=self.bg_light, border_width=2, border_color="#E0E0E0")
         f.place(relx=0.5, rely=0.5, anchor="center")
         ctk.CTkLabel(f, text="GATEWAY C.R.G", font=("Segoe UI", 32, "bold"), text_color=self.sena_dark).pack(pady=(50, 5))
         ctk.CTkLabel(f, text="Chronos Registry System | High Softwares", font=("Segoe UI", 13), text_color="#888").pack(pady=(0, 40))
-        ctk.CTkButton(f, text="💻 TERMINAL APRENDICES", height=55, width=350, corner_radius=10, command=self.mostrar_terminal).pack(pady=10)
-        ctk.CTkButton(f, text="🔐 PANEL ADMINISTRATIVO", height=55, width=350, corner_radius=10, fg_color="#333", hover_color="#1a1a1a", command=self.mostrar_login).pack(pady=10)
-        ctk.CTkButton(f, text="👤 MI PERFIL (APRENDIZ)", height=55, width=350, corner_radius=10, fg_color="transparent", text_color=self.sena_green, border_width=2, border_color=self.sena_green, hover_color="#E8F5E9", command=self.login_aprendiz_view).pack(pady=10)
+        ctk.CTkButton(f, text="TERMINAL APRENDICES", height=55, width=350, corner_radius=10, command=self.mostrar_terminal).pack(pady=10, padx=20)
+        ctk.CTkButton(f, text="PANEL ADMINISTRATIVO", height=55, width=350, corner_radius=10, fg_color="#333", hover_color="#1a1a1a", command=self.mostrar_login).pack(pady=10, padx=20)
+        ctk.CTkButton(f, text="MI PERFIL (APRENDIZ)", height=55, width=350, corner_radius=10, fg_color="transparent", text_color=self.sena_green, border_width=2, border_color=self.sena_green, hover_color="#E8F5E9", command=self.login_aprendiz_view).pack(pady=10, padx=20)
 
     # --- VISTA 2: TERMINAL ---
     def mostrar_terminal(self):
         self.limpiar_pantalla()
         head = ctk.CTkFrame(self.main_container, height=70, corner_radius=0, fg_color=self.sena_green); head.pack(fill="x")
         ctk.CTkButton(head, text="⬅ VOLVER", width=140, fg_color=self.sena_dark, command=self.mostrar_inicio).pack(side="left", padx=25, pady=15)
-        f = ctk.CTkFrame(self.main_container, width=650, height=550, corner_radius=25, fg_color="white", border_width=1, border_color="#DDD"); f.place(relx=0.5, rely=0.5, anchor="center")
+        f = ctk.CTkFrame(self.main_container, width=650, height=550, corner_radius=25, fg_color=self.bg_light, border_width=1, border_color="#DDD"); f.place(relx=0.5, rely=0.5, anchor="center")
         ctk.CTkLabel(f, text="REGISTRO DE ASISTENCIA", font=("Segoe UI", 26, "bold")).pack(pady=35)
         ent_doc = ctk.CTkEntry(f, font=("Segoe UI", 30), width=480, height=80, placeholder_text="N° Documento", justify="center"); ent_doc.pack(pady=25); ent_doc.focus()
 
@@ -104,10 +106,10 @@ class SistemaHSGS:
     # --- VISTA 3: PERFIL APRENDIZ ---
     def login_aprendiz_view(self):
         self.limpiar_pantalla()
-        f = ctk.CTkFrame(self.main_container, width=450, height=480, corner_radius=25, fg_color="white"); f.place(relx=0.5, rely=0.5, anchor="center")
+        f = ctk.CTkFrame(self.main_container, width=450, height=480, corner_radius=25, fg_color=self.bg_light, border_width=2, border_color="#DDD"); f.place(relx=0.5, rely=0.5, anchor="center")
         ctk.CTkLabel(f, text="ACCESO APRENDIZ", font=("Segoe UI", 24, "bold")).pack(pady=35)
-        u_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Documento"); u_ent.pack(pady=12)
-        p_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Contraseña", show="*"); p_ent.pack(pady=12)
+        u_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Documento"); u_ent.pack(pady=12, padx=20)
+        p_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Contraseña", show="*"); p_ent.pack(pady=12, padx=20)
 
         def entrar():
             user = self.servicio.login_aprendiz(u_ent.get(), p_ent.get())
@@ -116,19 +118,19 @@ class SistemaHSGS:
                 self.mostrar_panel_aprendiz(user)
             else: messagebox.showerror("Error", "Credenciales Incorrectas")
 
-        ctk.CTkButton(f, text="INGRESAR", width=320, height=55, command=entrar).pack(pady=35)
-        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack()
+        ctk.CTkButton(f, text="INGRESAR", width=320, height=55, command=entrar).pack(pady=35, padx=20)
+        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack(padx=20)
 
     def mostrar_panel_aprendiz(self, user):
         self.limpiar_pantalla()
-        head = ctk.CTkFrame(self.main_container, height=75, corner_radius=0, fg_color="white", border_width=1, border_color="#EEE"); head.pack(fill="x")
+        head = ctk.CTkFrame(self.main_container, height=75, corner_radius=0, fg_color=self.bg_light, border_width=1, border_color="#EEE"); head.pack(fill="x")
         ctk.CTkButton(head, text="🚪 CERRAR SESIÓN", fg_color="#FF5252", hover_color="#D32F2F", command=self.mostrar_inicio).pack(side="left", padx=25)
         ctk.CTkLabel(head, text=f"Aprendiz: {user['nombre_completo']}", font=("Segoe UI", 15, "bold")).pack(side="right", padx=35)
 
         body = ctk.CTkFrame(self.main_container, fg_color="transparent"); body.pack(fill="both", expand=True, padx=45, pady=25)
-        left = ctk.CTkFrame(body, corner_radius=20, fg_color="white", border_width=1, border_color="#DDD"); left.place(relx=0, rely=0, relwidth=0.64, relheight=1)
+        left = ctk.CTkFrame(body, corner_radius=20, fg_color=self.bg_light, border_width=1, border_color="#DDD"); left.place(relx=0, rely=0, relwidth=0.64, relheight=1)
         cal = Calendar(left, selectmode='day', locale='es_ES', background=self.sena_green, headersbackground=self.sena_dark); cal.pack(fill="both", expand=True, padx=25, pady=25)
-        right = ctk.CTkFrame(body, corner_radius=20, fg_color="white", border_width=1, border_color="#DDD"); right.place(relx=0.66, rely=0, relwidth=0.34, relheight=1)
+        right = ctk.CTkFrame(body, corner_radius=20, fg_color=self.bg_light, border_width=1, border_color="#DDD"); right.place(relx=0.66, rely=0, relwidth=0.34, relheight=1)
         lbl_info = ctk.CTkLabel(right, text="Actividad del día", font=("Segoe UI", 18, "bold")); lbl_info.pack(pady=20)
         
         container_cards = ctk.CTkScrollableFrame(right, fg_color="transparent"); container_cards.pack(fill="both", expand=True, padx=12, pady=8)
@@ -148,7 +150,7 @@ class SistemaHSGS:
     # --- VISTA 4: PANEL ADMINISTRATIVO INTEGRAL ---
     def mostrar_login(self):
         self.limpiar_pantalla()
-        f = ctk.CTkFrame(self.main_container, width=420, height=480, corner_radius=25, fg_color="white"); f.place(relx=0.5, rely=0.5, anchor="center")
+        f = ctk.CTkFrame(self.main_container, width=420, height=480, corner_radius=25, fg_color=self.bg_light); f.place(relx=0.5, rely=0.5, anchor="center")
         ctk.CTkLabel(f, text="ADMINISTRACIÓN", font=("Segoe UI", 24, "bold")).pack(pady=35)
         u = ctk.CTkEntry(f, placeholder_text="Usuario", width=300, height=50); u.pack(pady=12)
         p = ctk.CTkEntry(f, placeholder_text="Contraseña", show="*", width=300, height=50); p.pack(pady=12)
@@ -191,7 +193,7 @@ class SistemaHSGS:
         ctk.CTkButton(t_gest, text="🗑️ MOVER A PAPELERA", fg_color="#E74C3C", command=lambda: [self.servicio.mandar_a_papelera(tv_gest.item(tv_gest.selection())['values'][0]), filtrar(), refresh_pap()] if tv_gest.selection() else None).pack(pady=10)
 
         # Registro
-        f_reg_m = ctk.CTkFrame(t_reg, corner_radius=20, fg_color="white", border_width=1, border_color="#EEE"); f_reg_m.pack(pady=20, padx=50, fill="x")
+        f_reg_m = ctk.CTkFrame(t_reg, corner_radius=20, fg_color=self.bg_light, border_width=1, border_color="#EEE"); f_reg_m.pack(pady=20, padx=50, fill="x")
         grid_f = tk.Frame(f_reg_m, bg="white"); grid_f.pack(pady=20, padx=25)
         fields = ["Documento", "Nombre Completo", "Correo"]; entries = {}
         for i, l in enumerate(fields):
@@ -217,7 +219,7 @@ class SistemaHSGS:
 
     # --- SEGURIDAD: VALIDACIÓN ROBUSTA ---
     def actualizar_password_ventana(self, documento):
-        v = tk.Toplevel(self.root); v.title("Seguridad C.R.G"); v.geometry("450x520"); v.configure(bg="white"); v.grab_set()
+        v = tk.Toplevel(self.root); v.title("Seguridad C.R.G"); v.geometry("450x520"); v.configure(bg=self.bg_light); v.grab_set()
         tk.Label(v, text="🔒 CAMBIO OBLIGATORIO", font=("bold", 12), bg="white", fg="#d32f2f").pack(pady=10)
         pass_var = tk.StringVar(); e = ttk.Entry(v, show="*", textvariable=pass_var, font=("Segoe UI", 12)); e.pack(pady=10, padx=40, fill="x")
         req_frame = tk.Frame(v, bg="white"); req_frame.pack(pady=10, padx=40, fill="x")
