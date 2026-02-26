@@ -177,7 +177,29 @@ class SistemaHSGSCRS:
         
         ###Explicacion parte 4
         """Definomos la parte inicial del programa,
-        usamos deiconify, contrario a withdraw, """
+        usamos deiconify, contrario a withdraw, este muestra la ventana,
+        luego usamos zoomed para que cargue en ventana completa.
+        
+        
+        seguido de esto llamamos a la animacion de entrada.
+        
+        definimos una funcion para limpiar la pantalla, dentro de esta tenemos
+        
+        un ciclo para obtener cada widget dentro del contenedor maestro, usando winfo_children
+        
+        obtenidos los datos lo eliminamos con destroy
+        
+        definimos la animacion de entrada
+        
+        dentro de esta primero usamos limpiar pantalla, seguido de ello creamos un frame transparente, que pondremos en main container
+        centrado con  rel y anchor, asi mismo creamos el label de las siglas, con sus caracteriticas, lo acomodamos con pack,
+        y le asignamos un tamaño para poder usar ese tamaño y hacerlo crecer,
+        seguido usamos after para crear el delay llamando a animar ciclo.
+        
+        definimos animar ciclo
+        
+        
+        """
     def lanzar_sistema(self):
         
         """Aqui definimos a lanzar_sistema, self es la referencia de la clase asi sabemos que lanzar_sistema
