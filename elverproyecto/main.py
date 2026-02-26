@@ -360,7 +360,7 @@ class SistemaHSGSCRS:
     en el segundo boton asignamos un color oscuro para diferenciarlo de los demas
     en el tercero usamos boton con fondo transparente, hover para cambiar el fondo al pasar el mouse, y borde verde preasignado.
     """
-
+    ###explicacion parte 5
     
     
     
@@ -385,7 +385,27 @@ class SistemaHSGSCRS:
         ctk.CTkButton(f, text="MI PERFIL (APRENDIZ)", height=55, width=350, corner_radius=10,
                        fg_color="transparent", text_color=self.sena_green, border_width=2,
                        border_color=self.sena_green, hover_color="#BDD8BF", command=self.login_aprendiz_view).pack(pady=10, padx=20)
-
+    ###Fin de la explicacion parte 5
+    
+    ###Explicacion parte 6
+    """  una vez creados los botones creamos las funciones que traeran las pantallas correspondientes
+    iniciamos con mostrar terminal para la pantalla principal de registros
+    usamos limpiar pantalla para evitar cosas sobrepuestas
+    
+    creamos una variable head como encabezados, con un frame ctk, le asiganamos el color sena green, a una altura de 70, sin redondeo,
+    y le decimos que ocupe todo el ancho con fill x, 
+    
+    seguido de esto creamos un boton para volver al inicio 
+    es el lado izquierdo con side left, oscuro sena, con el cando ya creado de mostrar inicio, ademas 
+    le damos algo de margen con padx y pady, se ubica en el escabezado porque sigue dentro del = de head.
+    
+    
+    seguido de esto creamos un frame para el cuerpo de la pantalla, color de fondo preasignado en bg_light, con bordes redondeados,
+    usamos place nuevamente para ubicarlo en el centro, y asi al crear el label de titulo y el entry poner ponerlo en la mitad con pack
+    
+    dentro de mostrar terminal creamos la funcion procesar
+    las variables msg y exito,
+    """
     # --- VISTA 2: TERMINAL ---
     def mostrar_terminal(self):
         """Pantalla de terminal para registrar asistencias."""
