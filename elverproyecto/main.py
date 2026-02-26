@@ -346,8 +346,19 @@ class SistemaHSGSCRS:
     
     empezamos llamando a limpiar pantalla para asegurar que no queden cosas sobrepuestas con el inicio del programa
     
-    Una vez limpia, iniciamos creando un variable f como un frame ctk, 
+    Una vez limpia, iniciamos creando un variable f como un frame ctk, le indicamos que va en el main, sus dimensiones,
+    y su la distancias de las esquinas, luego con fg asignamos el color de fondo, el tamaño del borde y el color del borde
+    con place sencillamente inidcamos como queremos que quede dentro de main, en extre caso 50% x y y y anchor al centro.
     
+    
+    Con esto definido ahora creamos dos label para el titulo y subtitulo en la pantalla principal,usamos colores estandar para el CRS
+    y un color opaco en el subtitulo asi tener un jerarquia visual
+    
+    En ves de crear label y button nos gusto mas tener el nombre de los botones dentro, por lo uqe usamos buttons de ctk
+    con un diseño mas moderno, cada boton usa un commando para traer la pantalla correspondiente al boton
+    En el primer boton no asignamos un color para que use el color base que asignamos al inicio del documento,
+    en el segundo boton asignamos un color oscuro para diferenciarlo de los demas
+    en el tercero usamos boton con fondo transparente, hover para cambiar el fondo al pasar el mouse, y borde verde preasignado.
     """
 
     
@@ -373,7 +384,7 @@ class SistemaHSGSCRS:
                        fg_color="#333", hover_color="#1a1a1a", command=self.mostrar_login).pack(pady=10, padx=20)
         ctk.CTkButton(f, text="MI PERFIL (APRENDIZ)", height=55, width=350, corner_radius=10,
                        fg_color="transparent", text_color=self.sena_green, border_width=2,
-                       border_color=self.sena_green, hover_color="#E8F5E9", command=self.login_aprendiz_view).pack(pady=10, padx=20)
+                       border_color=self.sena_green, hover_color="#BDD8BF", command=self.login_aprendiz_view).pack(pady=10, padx=20)
 
     # --- VISTA 2: TERMINAL ---
     def mostrar_terminal(self):
