@@ -198,8 +198,34 @@ class SistemaHSGSCRS:
         
         definimos animar ciclo
         
+        usamos condicional para definir como funcionara la animacion.
+        inicialmente le decimos que si el tamaño es menor a 120 hareos los pasos para la animacion,
+        entonces definimos a que queremos llegar,
+        seguido de esto marcamos una diferencia para tener un crecimiento gradual con un formul sencilla
+        creamos como hara los pasos de crecimiento con step, usamos max para definir el minimo de crecimiento y con diff dividido a 10
+        hacemos que el tamaño de los pasos sea proporcional al tamaño creciendo siempre un 10% del tamaño que falta,
+        luego hacemos que el texto se sume con el paso
+        seguido de esto cuando llegamo a 60, cambiamos a dark sena
+        para finalizar con el condicional le decimos que cuando pasemos por 30 cambie el color para tener ese efecto de enfoque,
+        y por ultimo, configuramos las condiciones y ponemos de nuevo animar ciclo para que siga buscando el tamaño objetivo
+        
+        luego definimos el nombre del programar cn ctklabel y lo acomodamos con pack, seguido llamamos a efecto pop
+        
+        definimos a efecto pop:
+        este es muy parecido al anterior, le decimos la condicional que si esta por debajo de un tamaño
+        entones,le decimos la diferencia,
+        creamos el paso, en este caso un poco mas agresivo, 
+        agrandamos el tamaño con lo que acabamos de crear
+        seguido configuramos el label con los nuevos valores del condicional
+        y llamamos de nuevo a efecto pop, entonces no pasaremos al else hasta que lleguemos al tamaño ojetivo
+        
+        entonces una vez lleguemos al obetivo
+        
+        Llamamos a mostrar inicio con un delay de 2 segundo para que el usuario vea la animacion.
         
         """
+        ###Explicacion parte 4
+        
     def lanzar_sistema(self):
         
         """Aqui definimos a lanzar_sistema, self es la referencia de la clase asi sabemos que lanzar_sistema
@@ -231,7 +257,7 @@ class SistemaHSGSCRS:
         self.f_intro = ctk.CTkFrame(self.main_container, fg_color="transparent")
         """Definimos una variable dentro de animacion de eentrada pro, es un frame transparente, la estructura es
         (contendor donde ira, color de fondo), transparente para que no se vea, solo veremos las letras."""
-        self.f_intro.place(relx=0.5, rely=0.5, anchor="center")
+        self.f_intro.place(relx=0.5, rely=0.4, anchor="center")
         """Aqui le decimos con place, donde va a ir, rel signifca relativo, usamos x y y, y facil de entender
         0.5=50%, como le estamos diciendo que x y y, seria la mitad de f_intro. anchor center.
         se centrara en el frame."""
@@ -244,38 +270,47 @@ class SistemaHSGSCRS:
         """Ya sabemos que pack organiza el widget en self, en este caso self para animacion d entrada pro."""
         self.size_actual = 10
         """Sabemos que queremos que el texto crezca por lo que definimos un tamaño pequeño inicial."""
-        self.root.after(500, self.animar_ciclo)
+        self.root.after(20, lambda: self.animar_ciclo())
         """de nuevo nuestro rey de animaciones after, ya lo conocemos
         (delay en ms, funcion a ejecutar), aca llamos la funcion que hara crecer el texto"""
 
-    def animar_ciclo(self):
-        """Bucle interno que agranda el texto de las siglas con easing suave."""
-        if self.size_actual < 120:
-            """Inicio de la "animacion",
-            le decinmos a la definicion que si size actual es menor a 120, entonces..."""
-            target = 120
-            """Queremos que sea 120"""
-            diff = target - self.size_actual
-            """Creamos una variable para saber la diferencia,
-            es una forma de ir aumentando el tamaño de forma gradual."""
-            step = max(1, diff // 10)
-            """Aqui indicamos como ira creciendo nuestro texto.
-            la estructura de max es primero el valor minimo que que queremos que crezca, y luego un valor calculado,
-            este tomaara uno de los dos, asi que si dif dividio en 10 da 0.5 entonces terminara con 1."""
-            self.size_actual += step
-            """hacemos crecer el texto, con size actual, y le sumamos el paso."""
-            if self.size_actual > 60:
-                """Aca sencillamente indicamos que si el tamaño ya llego a 60"""
-                self.lbl_siglas.configure(text_color=self.sena_dark)
-                """Cambiara el color de las letras a sena dark"""
-            elif self.size_actual > 30:
-                """de lo contrario si apenas va pasando por 30"""
-                self.lbl_siglas.configure(text_color="#888888")
-                """Sera un gris oscuro"""
-            self.lbl_siglas.configure(font=("Segoe UI", self.size_actual, "bold"))
-            self.root.after(10, self.animar_ciclo)
+    def animar_ciclo(self, paso=0):
+        total_pasos = 100  # Aumentamos a 100 para máxima fluidez
+        size_inicial = 10
+        target = 120
+
+        if paso <= total_pasos:
+            progreso = paso / total_pasos
+            factor = 1 - (1 - progreso) ** 3 
+            
+            self.size_actual = int(size_inicial + (target - size_inicial) * factor)
+
+            # --- LÓGICA DE COLOR (GRADUACIÓN) ---
+            # Definimos el inicio (Gris #888888) y el fin (Verde SENA) en RGB
+            # El verde SENA suele ser algo como (57, 181, 74) -> #39B54A
+            color_inicio = (136, 136, 136)  # #888888
+            color_fin = (57, 181, 74)       # Ajusta según tu variable self.sena_dark
+            
+            # Mezclamos los colores según el progreso
+            # Si progreso es 0, es 100% gris. Si es 1, es 100% verde.
+            r = int(color_inicio[0] + (color_fin[0] - color_inicio[0]) * progreso)
+            g = int(color_inicio[1] + (color_fin[1] - color_inicio[1]) * progreso)
+            b = int(color_inicio[2] + (color_fin[2] - color_inicio[2]) * progreso)
+            
+            color_hex = f'#{r:02x}{g:02x}{b:02x}'
+            # ------------------------------------
+
+            self.lbl_siglas.configure(
+                text_color=color_hex,
+                font=("Segoe UI", self.size_actual, "bold")
+            )
+            
+            self.root.after(10, lambda: self.animar_ciclo(paso + 1))
+        
         else:
-            self.lbl_nombre = ctk.CTkLabel(self.f_intro, text="CHRONOS REGISTRY SYSTEM", font=("Segoe UI", 1, "bold"), text_color="#555")
+            # Finalización y siguiente elemento
+            self.lbl_nombre = ctk.CTkLabel(self.f_intro, text="CHRONOS REGISTRY SYSTEM", 
+                                        font=("Segoe UI", 1, "bold"), text_color="#555")
             self.lbl_nombre.pack(pady=20)
             self.efecto_pop(1)
 
@@ -301,9 +336,23 @@ class SistemaHSGSCRS:
             """Y terminamos nuestra animacion con un delay de 2 segundos para que el usuario 
             tenga tiempo de ver el logo y el nombre, y asi, pasamos a la parte tecnica del programa
             mostrando la pantalla de inicio."""
-    ###Fin Efectos principales de animacion###        
+    ###Fin Efectos principales de animacion### 
+    
+    ###fin de la explicacion parte 4       
             
 
+    ###Explicacion parte 5
+    """Aqui definimos a mostrar_inicio,
+    
+    empezamos llamando a limpiar pantalla para asegurar que no queden cosas sobrepuestas con el inicio del programa
+    
+    Una vez limpia, iniciamos creando un variable f como un frame ctk, 
+    
+    """
+
+    
+    
+    
     # --- VISTA 1: GATEWAY ---
     def mostrar_inicio(self):
         """Renderiza la pantalla de entrada con las tres opciones principales."""
