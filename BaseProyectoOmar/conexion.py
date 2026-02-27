@@ -2,6 +2,23 @@ import mysql.connector
 from mysql.connector import Error
 
 class InventarioDB:
+    """Encapsula la conexión y las operaciones básicas contra MySQL.
+
+    Esta clase se utiliza en toda la aplicación CRS para realizar inserciones,
+    consultas, eliminaciones, cálculos de horas y, ahora, auditoría de acciones
+    administrativas. Al centralizar el acceso a la base de datos evitamos
+    dispersión de sentencias SQL y facilitamos la prueba unitaria.
+
+    Convenciones de la clase:
+    - Cada método comprueba `self.conexion` antes de ejecutar cualquier
+      sentencia. Si la conexión es `None` simplemente retorna un valor
+      neutro (False o lista vacía) para evitar excepciones en cascada.
+    - Los errores se imprimen en consola; la capa de lógica puede reaccionar
+      según el valor de retorno (True/False o lista).
+    - Los métodos actuales cubren: asistencias, búsquedas, borrado y reporte
+      de horas. Se añade un método para registrar eventos de auditoría.
+    """
+
     def __init__(self):
         """Establece la conexión con la base de datos TechSenaHSGS de HSGS."""
         try:
@@ -13,7 +30,7 @@ class InventarioDB:
             )
             if self.conexion.is_connected():
                 # dictionary=True permite acceder a los datos por nombre de columna
-                self.cursor = self.conexion.cursor(dictionary=True)
+                self.cursor = self.conexion.cursor(dictionary=True, buffered=True)
                 print("Conexión exitosa a la red HSGS.")
         except Error as e:
             print(f"Error crítico de conexión HSGS: {e}")
@@ -72,6 +89,23 @@ class InventarioDB:
             self.cursor.close()
             self.conexion.close()
             print("Sesión HSGS finalizada correctamente.")
+
+    # -------------------- NUEVA FUNCIONALIDAD: AUDITORÍA --------------------
+    def registrar_auditoria(self, usuario, accion, objeto="", detalles=""):
+        """Guarda un registro de auditoría en la tabla `auditoria`."""
+        if not self.conexion or not self.conexion.is_connected():
+            return False
+        try:
+            # Quitamos el 'CREATE TABLE IF NOT EXISTS' de aquí para que sea más rápido
+            query = ("INSERT INTO auditoria (usuario, accion, objeto, detalles) "
+                     "VALUES (%s, %s, %s, %s)")
+            self.cursor.execute(query, (usuario, accion, objeto, detalles))
+            self.conexion.commit()
+            return True
+        except Error as e:
+            print(f"Error al registrar auditoría: {e}")
+            return False
+
     def obtener_reporte_horas(self, documento):
         """Calcula el total de horas acumuladas por aprendiz."""
         if not self.conexion: return []
