@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 20-02-2026 a las 18:18:44
+-- Tiempo de generación: 27-02-2026 a las 20:31:14
 -- Versión del servidor: 9.1.0
 -- Versión de PHP: 8.3.14
 
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `asistencias` (
   PRIMARY KEY (`id_asistencia`),
   KEY `fk_asistencia_estudiante` (`documento_estudiante`),
   KEY `fk_asistencia_competencia` (`id_competencia`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Volcado de datos para la tabla `asistencias`
@@ -48,6 +48,48 @@ INSERT INTO `asistencias` (`id_asistencia`, `documento_estudiante`, `id_competen
 (10, '1046426401', 1, '2026-02-19 21:29:29', '', '2026-02-19 21:29:38'),
 (11, '1046426401', 1, '2026-02-19 21:29:45', '', '2026-02-19 21:29:51'),
 (12, '1046426401', 1, '2026-02-20 13:17:07', '', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `auditoria`
+--
+
+DROP TABLE IF EXISTS `auditoria`;
+CREATE TABLE IF NOT EXISTS `auditoria` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `usuario` varchar(50) COLLATE utf8mb3_spanish2_ci DEFAULT NULL,
+  `accion` varchar(100) COLLATE utf8mb3_spanish2_ci DEFAULT NULL,
+  `objeto` varchar(100) COLLATE utf8mb3_spanish2_ci DEFAULT NULL,
+  `detalles` text COLLATE utf8mb3_spanish2_ci,
+  `fecha` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_spanish2_ci;
+
+--
+-- Volcado de datos para la tabla `auditoria`
+--
+
+INSERT INTO `auditoria` (`id`, `usuario`, `accion`, `objeto`, `detalles`, `fecha`) VALUES
+(1, 'admin', 'login admin', '', '', '2026-02-27 13:31:15'),
+(2, 'admin', 'login admin', '', '', '2026-02-27 13:44:54'),
+(3, '1102353842', 'login aprendiz', '', '', '2026-02-27 15:04:52'),
+(4, '1102353842', 'logout aprendiz', '', '', '2026-02-27 15:05:11'),
+(5, 'admin', 'login admin', '', '', '2026-02-27 15:05:39'),
+(6, 'admin', 'logout admin', '', '', '2026-02-27 15:07:09'),
+(7, 'admin', 'login admin', '', '', '2026-02-27 15:07:54'),
+(8, 'admin', 'mover a papelera', '1102353842', '', '2026-02-27 15:08:16'),
+(9, 'admin', 'logout admin', '', '', '2026-02-27 15:08:21'),
+(10, 'admin', 'login admin', '', '', '2026-02-27 15:08:58'),
+(11, 'admin', 'restaurar aprendiz', '1102353842', '', '2026-02-27 15:09:01'),
+(12, 'admin', 'logout admin', '', '', '2026-02-27 15:09:15'),
+(13, 'admin', 'login admin', '', '', '2026-02-27 15:09:42'),
+(14, 'admin', 'mover a papelera', '1102353842', '', '2026-02-27 15:09:48'),
+(15, 'admin', 'logout admin', '', '', '2026-02-27 15:09:58'),
+(16, 'admin', 'login admin', '', '', '2026-02-27 15:10:04'),
+(17, 'admin', 'restaurar aprendiz', '1102353842', '', '2026-02-27 15:10:13'),
+(18, 'admin', 'logout admin', '', '', '2026-02-27 15:10:21'),
+(19, 'admin', 'login admin', '', '', '2026-02-27 15:16:28');
 
 -- --------------------------------------------------------
 
@@ -85,17 +127,19 @@ CREATE TABLE IF NOT EXISTS `estudiantes` (
   `correo` varchar(100) DEFAULT NULL,
   `password` varchar(255) NOT NULL DEFAULT 'sena123',
   `id_ficha` int DEFAULT NULL,
+  `cambio_pass` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`id_estudiante`),
   UNIQUE KEY `documento` (`documento`),
   KEY `fk_estudiante_ficha` (`id_ficha`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Volcado de datos para la tabla `estudiantes`
 --
 
-INSERT INTO `estudiantes` (`id_estudiante`, `documento`, `nombre_completo`, `correo`, `password`, `id_ficha`) VALUES
-(5, '1046426401', 'Elver', 'gravisludio@gmail.com', 'sena123', 1);
+INSERT INTO `estudiantes` (`id_estudiante`, `documento`, `nombre_completo`, `correo`, `password`, `id_ficha`, `cambio_pass`) VALUES
+(5, '1046426401', 'Elver', 'gravisludio@gmail.com', 'sena123', 1, 0),
+(10, '1102353842', 'Omar Alexis Ardila', 'xd@gmai.com', 'sena123', 1, 0);
 
 -- --------------------------------------------------------
 

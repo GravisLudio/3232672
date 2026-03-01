@@ -375,70 +375,31 @@ class AsistenciaService:
         return self.db.cursor.fetchall()
 
     def guardar_aprendiz_manual(self, datos, id_ficha):
-        """
-        PROPÓSITO:
-            Crea un nuevo registro de aprendiz manualmente mediante el formulario
-            en la pestaña "Registro" del panel admin.
+
+        documento = datos.get("Documento", "").strip()
         
-        FLUJO DE VALIDACIÓN:
-            1. Verifica que Documento, Nombre y Ficha no sean vacíos
-            2. Construye valores por defecto para campos no ingresados
-            3. Intenta insertar en tabla 'estudiantes'
-            4. Si hay error (ej: documento duplicado), lo captura
-        
-        PARÁMETROS:
-            datos (dict): Diccionario con campos del formulario
-                Estructura esperada:
-                {
-                    'Documento': '1023456789',
-                    'Nombre Completo': 'Juan Pérez López',
-                    'Correo': 'juan@example.com'  # Opcional
-                }
-            
-            id_ficha (str): ID de la ficha a la que pertenece el aprendiz
-        
-        RETORNA:
-            Tupla (bool, str):
-                - (True, "✅ Aprendiz guardado...") si éxito
-                - (False, "❌ Error al guardar...") si falla
-        
-        INSERCIÓN SQL:
-            INSERT INTO estudiantes 
-            (documento, nombre_completo, correo, id_ficha) 
-            VALUES (%s, %s, %s, %s)
-        
-        CAMPOS DE BD:
-            - documento (PK): Identificador único del aprendiz
-            - nombre_completo: Nombre completo
-            - correo: Email (puede ser vacío si no se proporciona)
-            - id_ficha (FK): Enlace a la tabla fichas
-            - password: Se genera NULL o por defecto
-            - cambio_pass: Se genera NULL/0 (debe cambiar)
-        
-        MANEJO DE ERRORES:
-            - Captura excepciones de SQL (ej: PRIMARY KEY duplicada)
-            - Si documento ya existe, BD rechaza el INSERT
-            - Retorna mensaje de error amigable
-        
-        VALIDACIÓN DE INTEGRIDAD:
-            - Documento, Nombre y Ficha son OBLIGATORIOS
-            - Correo es OPCIONAL
-            - id_ficha debe existir en tabla fichas (FK constraint)
-        
-        POST-ÉXITO:
-            - Se llama filtrar() en main.py para recargar tabla
-            - Se limpian los fields del formulario
-        """
-        if not datos["Documento"] or not datos["Nombre Completo"] or not id_ficha:
+        if not documento or not datos["Nombre Completo"] or not id_ficha:
             return False, "Documento, Nombre y Ficha son campos obligatorios."
+        
+        if len(documento) > 10:
+            return False, "❌ El documento no puede tener más de 10 dígitos."
+        
+        if not documento.isdigit():
+            return False, "❌ El documento debe contener solo números."
+
         try:
+            # Intentamos la inserción
             self.db.cursor.execute(
                 "INSERT INTO estudiantes (documento, nombre_completo, correo, id_ficha) VALUES (%s, %s, %s, %s)", 
                 (datos["Documento"], datos["Nombre Completo"], datos.get("Correo", ""), id_ficha)
             )
             self.db.conexion.commit()
             return True, "✅ Aprendiz guardado en el sistema."
+        
         except Exception as e:
+            # Si el error es por duplicado (código 1062 en MySQL)
+            if "Duplicate entry" in str(e) or "1062" in str(e):
+                return False, f"❌ El documento {datos['Documento']} ya se encuentra registrado."
             return False, f"❌ Error al guardar: {str(e)}"
 
     def importar_excel(self):

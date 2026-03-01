@@ -30,7 +30,7 @@ class InventarioDB:
             )
             if self.conexion.is_connected():
                 # dictionary=True permite acceder a los datos por nombre de columna
-                self.cursor = self.conexion.cursor(dictionary=True)
+                self.cursor = self.conexion.cursor(dictionary=True, buffered=True)
                 print("Conexión exitosa a la red HSGS.")
         except Error as e:
             print(f"Error crítico de conexión HSGS: {e}")
@@ -92,42 +92,11 @@ class InventarioDB:
 
     # -------------------- NUEVA FUNCIONALIDAD: AUDITORÍA --------------------
     def registrar_auditoria(self, usuario, accion, objeto="", detalles=""):
-        """Guarda un registro de auditoría en la tabla `auditoria`.
-
-        Parámetros:
-            usuario (str): nombre o identificador del admin que realiza la acción.
-            accion (str): descripción breve de la operación (login, eliminar, etc.).
-            objeto (str): entidad sobre la que se actuó (ej. documento aprendiz).
-            detalles (str): cualquier detalle adicional (por qué, condición, etc.).
-
-        RETORNA:
-            True si la inserción fue exitosa, False en caso contrario.
-
-        NOTA:
-            Asume que existe una tabla `auditoria` con la siguiente estructura:
-
-            CREATE TABLE auditoria (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                usuario VARCHAR(50),
-                accion VARCHAR(100),
-                objeto VARCHAR(100),
-                detalles TEXT,
-                fecha DATETIME DEFAULT NOW()
-            );
-        """
-        if not self.conexion:
+        """Guarda un registro de auditoría en la tabla `auditoria`."""
+        if not self.conexion or not self.conexion.is_connected():
             return False
         try:
-            # asegurar que exista la tabla de auditoría (solo la primera vez)
-            ddl = ("CREATE TABLE IF NOT EXISTS auditoria ("
-                   "id INT AUTO_INCREMENT PRIMARY KEY,"
-                   "usuario VARCHAR(50),"
-                   "accion VARCHAR(100),"
-                   "objeto VARCHAR(100),"
-                   "detalles TEXT,"
-                   "fecha DATETIME DEFAULT NOW()"
-                   ")")
-            self.cursor.execute(ddl)
+            # Quitamos el 'CREATE TABLE IF NOT EXISTS' de aquí para que sea más rápido
             query = ("INSERT INTO auditoria (usuario, accion, objeto, detalles) "
                      "VALUES (%s, %s, %s, %s)")
             self.cursor.execute(query, (usuario, accion, objeto, detalles))

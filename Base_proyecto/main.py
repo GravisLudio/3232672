@@ -146,8 +146,8 @@ class SistemaHSGSCRS:
             user = self.servicio.login_aprendiz(u_ent.get(), p_ent.get())
             if user:
                 self.aprendiz_actual = u_ent.get()
-                try: self.db.registrar_auditoria(self.aprendiz_actual, "login aprendiz")
-                except: pass
+                if not self.db.registrar_auditoria(self.aprendiz_actual, "login aprendiz"):
+                    print("⚠️ Advertencia: No se pudo registrar la auditoría de login.")
                 if user.get('cambio_pass') == 0 or p_ent.get() == 'sena123': self.actualizar_password_ventana(user['documento'])
                 self.mostrar_panel_aprendiz(user)
             else: messagebox.showerror("Error", "Credenciales Incorrectas")
@@ -257,15 +257,36 @@ class SistemaHSGSCRS:
         for i, l in enumerate(fields):
             ctk.CTkLabel(grid_f, text=l, text_color="gray").grid(row=0, column=i, padx=12)
             e = ctk.CTkEntry(grid_f, width=190); e.grid(row=1, column=i, padx=5, pady=5); entries[l] = e
-        cb_f = ttk.Combobox(grid_f, state="readonly", width=40); cb_f.grid(row=1, column=3, padx=12); cb_f['values'] = [f"{f['id_ficha']} | {f['codigo_ficha']}" for f in self.servicio.obtener_fichas()]
+        cb_f = ttk.Combobox(grid_f, state="readonly", width=40); cb_f.grid(row=1, column=3, padx=12); cb_f['values'] = [f"{f['id_ficha']} | {f['nombre_programa']}" for f in self.servicio.obtener_fichas()]
         def save():
-            if self.servicio.guardar_aprendiz_manual({k: v.get() for k, v in entries.items()}, cb_f.get().split(" | ")[0] if cb_f.get() else None):
-                messagebox.showinfo("OK", "Registrado"); [v.delete(0, 'end') for v in entries.values()]; filtrar()
+            exito, mensaje = self.servicio.guardar_aprendiz_manual(
+                {k: v.get() for k, v in entries.items()}, 
+                cb_f.get().split(" | ")[0] if cb_f.get() else None
+            )
+            
+            if exito:
+                messagebox.showinfo("C.R.S", mensaje)
+                [v.delete(0, 'end') for v in entries.values()] # Limpiar campos
+                filtrar() # Recargar tabla
+            else:
+                # Si hubo error (como el duplicado), mostrar advertencia
+                messagebox.showwarning("Atención", mensaje)
         ctk.CTkButton(f_reg_m, text="💾 GUARDAR", command=save).pack(pady=15)
         ctk.CTkButton(t_reg, text="📂 CARGA EXCEL", fg_color="#333", command=self.servicio.importar_excel).pack()
+        
+        def limpiar():
+            for e in entries.values(): e.delete(0, 'end')
+            cb_f.set('')
+
+        # Botón Limpiar (añádelo debajo del botón GUARDAR)
+        ctk.CTkButton(f_reg_m, text="🧹 LIMPIAR", fg_color="#555", command=limpiar).pack(pady=5)
+        
+        
 
         tv_f3 = tk.Frame(t_pap, bg=self.bg_light); tv_f3.pack(fill="both", expand=True, padx=20, pady=12)
         tv_pap = ttk.Treeview(tv_f3, columns=("DOC", "NOMBRE", "FICHA"), show="headings", selectmode='extended'); [tv_pap.heading(c, text=c) for c in ("DOC", "NOMBRE", "FICHA")]; tv_pap.pack(fill="both", expand=True)
+        
+        
         def refresh_pap():
             for i in tv_pap.get_children(): tv_pap.delete(i)
             self.db.cursor.execute("SELECT documento, nombre_completo, id_ficha FROM estudiantes_eliminados")
