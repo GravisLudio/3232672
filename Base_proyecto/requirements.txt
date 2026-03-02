@@ -3,3 +3,5 @@ pandas
 tkcalendar
 openpyxl
 customtkinter
+reportlab
+python-dotenv

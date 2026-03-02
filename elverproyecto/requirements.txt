@@ -4,5 +4,4 @@ tkcalendar
 openpyxl
 customtkinter
 reportlab
-reportlab
 python-dotenv

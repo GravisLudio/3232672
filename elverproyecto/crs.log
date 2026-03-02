@@ -6,3 +6,15 @@
 2026-03-02 11:15:54,889 INFO mysql.connector: plugin_name: caching_sha2_password
 2026-03-02 11:15:54,889 INFO mysql.connector: AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
 2026-03-02 11:15:54,890 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-02 15:31:56,246 INFO mysql.connector: package: mysql.connector.plugins
+2026-03-02 15:31:56,247 INFO mysql.connector: plugin_name: caching_sha2_password
+2026-03-02 15:31:56,247 INFO mysql.connector: AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2026-03-02 15:31:56,249 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-02 15:36:23,317 INFO mysql.connector: package: mysql.connector.plugins
+2026-03-02 15:36:23,318 INFO mysql.connector: plugin_name: caching_sha2_password
+2026-03-02 15:36:23,318 INFO mysql.connector: AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2026-03-02 15:36:23,319 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-02 15:39:25,820 INFO mysql.connector: package: mysql.connector.plugins
+2026-03-02 15:39:25,821 INFO mysql.connector: plugin_name: caching_sha2_password
+2026-03-02 15:39:25,821 INFO mysql.connector: AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2026-03-02 15:39:25,823 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.

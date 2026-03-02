@@ -174,9 +174,6 @@ class SistemaHSGSCRS:
         u_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Documento"); u_ent.pack(pady=12, padx=20)
         p_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Contraseña", show="*"); p_ent.pack(pady=12, padx=20)
         
-        ctk.CTkButton(f, text="INGRESAR", width=320, height=55, command=lambda:self.entrar(u_ent, p_ent)).pack(pady=35, padx=20)
-        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack(padx=20)
-        
         def entrar(u_ent, p_ent):
             user = self.servicio.login_aprendiz(u_ent.get(), p_ent.get())
             if user:
@@ -186,6 +183,9 @@ class SistemaHSGSCRS:
                 if user.get('cambio_pass') == 0 or p_ent.get() == 'sena123': self.actualizar_password_ventana(user['documento'])
                 self.mostrar_panel_aprendiz(user)
             else: messagebox.showerror("Error", "Credenciales Incorrectas")
+        
+        ctk.CTkButton(f, text="INGRESAR", width=320, height=55, command=lambda:entrar(u_ent, p_ent)).pack(pady=35, padx=20)
+        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack(padx=20)
             
         
         
@@ -413,10 +413,10 @@ class SistemaHSGSCRS:
                       command=self.lanzar_reporte)
         btn_gen.pack(side="left", padx=5)
         ToolTip(btn_gen, "Generar gráfico según filtros")
-        btn_exp = ctk.CTkButton(btn_frame, text="📥 EXPORTAR", font=("Arial", 14, "bold"),
-                      fg_color="#3A7FF6", hover_color="#346DD1", command=self.exportar_reporte)
-        btn_exp.pack(side="left", padx=5)
-        ToolTip(btn_exp, "Guardar reporte en PDF o Excel")
+        self.btn_exp_rep = ctk.CTkButton(btn_frame, text="📥 EXPORTAR", font=("Arial", 14, "bold"),
+                      fg_color="#888", hover_color="#666", state="disabled", command=self.exportar_reporte)
+        self.btn_exp_rep.pack(side="left", padx=5)
+        ToolTip(self.btn_exp_rep, "Guardar reporte en PDF o Excel (primero genera un reporte)")
 
         # --- EL CANVAS (Fuera del frame de filtros para que no se oculte) ---
         self.canvas_rep = tk.Canvas(t_rep, bg="white", height=300, highlightthickness=1, highlightbackground="#DDD")
@@ -742,6 +742,13 @@ class SistemaHSGSCRS:
             self.lbl_lista_rep.configure(text="Seleccionados: Ninguno")
 
     def lanzar_reporte(self):
+        # VALIDACIÓN: verificar que haya seleccionado al menos un elemento
+        if not self.items_seleccionados:
+            self.canvas_rep.delete("all")
+            self.canvas_rep.create_text(400, 150, text="⚠️ Debe seleccionar al menos una ficha o aprendiz", fill="#E74C3C", font=("Arial", 12, "bold"))
+            self.btn_exp_rep.configure(state="disabled", fg_color="#888")
+            return
+        
         self.canvas_rep.delete("all")
         ids_limpios = [item.split(" | ")[0] for item in self.items_seleccionados]
         modo = self.modo_filtro.get()
@@ -804,6 +811,7 @@ class SistemaHSGSCRS:
         # Si no hay datos en todos los items
         if not any(it['metrics']['total_asistencias'] or it['metrics'].get('expected', 0) for it in items):
             self.canvas_rep.create_text(300, 150, text="❌ No hay registros para esta selección", fill="red", font=("Arial", 14))
+            self.btn_exp_rep.configure(state="disabled", fg_color="#888")
             return
         # almacenar items para permitir exportación
         self.last_report_items = items
@@ -816,8 +824,15 @@ class SistemaHSGSCRS:
         pad = 30
         n = len(items)
         col_w = max(100, (W - 2*pad) / max(1, n))
-        base_y = int(H * 0.6)
-        max_h = int(H * 0.35)
+        base_y = int(H * 0.55)  # Ajustado para dejar espacio al resumen
+        max_h = int(H * 0.3)
+        
+        # RESUMEN DE TOTALES
+        total_global_asist = sum(it['metrics'].get('total_asistencias', 0) for it in items)
+        total_global_faltas = sum(it['metrics'].get('faltas', 0) for it in items)
+        total_global_retardos = sum(it['metrics'].get('retardos', 0) for it in items)
+        resumen_txt = f"RESUMEN GLOBAL: Asistencias: {total_global_asist} | Faltas: {total_global_faltas} | Retardos: {total_global_retardos}"
+        self.canvas_rep.create_text(W//2, 20, text=resumen_txt, font=("Arial", 11, "bold"), fill="#2D5A27")
 
         for i, it in enumerate(items):
             m = it['metrics']
@@ -846,8 +861,8 @@ class SistemaHSGSCRS:
             self.canvas_rep.create_text(x_center, base_y + 18, text=it['label'], font=("Arial", 10, "bold"))
             self.canvas_rep.create_text(x_center, base_y + 36, text=f"A:{total}  F:{faltas}  R:{retardos}", font=("Arial", 9))
 
-        # Encabezado de resumen
-        self.canvas_rep.create_text(W//2, 30, text="Reporte de Asistencias", font=("Arial", 16, "bold"))
+        # Habilitar botón exportar
+        self.btn_exp_rep.configure(state="normal", fg_color="#3A7FF6")
         
     def actualizar_password_ventana(self, documento):
         v = tk.Toplevel(self.root); v.title("Seguridad C.R.S"); v.geometry("450x520"); v.configure(bg=self.bg_light); v.grab_set()
