@@ -39,13 +39,13 @@ class SistemaHSGSCRS:
     def lanzar_sistema(self):
         self.root.deiconify() 
         self.root.state('zoomed') 
-        self.animacion_entrada_pro()
+        self.animacion_entrada()
         
     def limpiar_pantalla(self):
         for widget in self.main_container.winfo_children():
             widget.destroy()
 
-    def animacion_entrada_pro(self):
+    def animacion_entrada(self):
         self.limpiar_pantalla()
         self.f_intro = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.f_intro.place(relx=0.5, rely=0.4, anchor="center")
@@ -64,7 +64,7 @@ class SistemaHSGSCRS:
             factor = 1 - (1 - progreso) ** 3 
             
             self.size_actual = int(size_inicial + (target - size_inicial) * factor)
-
+        
             color_inicio = (136, 136, 136)
             color_fin = (57, 181, 74)
             
@@ -141,8 +141,11 @@ class SistemaHSGSCRS:
         ctk.CTkLabel(f, text="ACCESO APRENDIZ", font=("Segoe UI", 24, "bold")).pack(pady=35)
         u_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Documento"); u_ent.pack(pady=12, padx=20)
         p_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Contraseña", show="*"); p_ent.pack(pady=12, padx=20)
-
-        def entrar():
+        
+        ctk.CTkButton(f, text="INGRESAR", width=320, height=55, command=lambda:self.entrar(u_ent, p_ent)).pack(pady=35, padx=20)
+        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack(padx=20)
+        
+        def entrar(u_ent, p_ent):
             user = self.servicio.login_aprendiz(u_ent.get(), p_ent.get())
             if user:
                 self.aprendiz_actual = u_ent.get()
@@ -151,9 +154,9 @@ class SistemaHSGSCRS:
                 if user.get('cambio_pass') == 0 or p_ent.get() == 'sena123': self.actualizar_password_ventana(user['documento'])
                 self.mostrar_panel_aprendiz(user)
             else: messagebox.showerror("Error", "Credenciales Incorrectas")
-
-        ctk.CTkButton(f, text="INGRESAR", width=320, height=55, command=entrar).pack(pady=35, padx=20)
-        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack(padx=20)
+            
+        
+        
 
     def mostrar_panel_aprendiz(self, user):
         self.limpiar_pantalla()
@@ -217,18 +220,18 @@ class SistemaHSGSCRS:
         ctk.CTkButton(head, text="🔒 CERRAR", fg_color="#444", command=cerrar_admin).pack(side="right", padx=25)
         tabview = ctk.CTkTabview(self.main_container, segmented_button_selected_color=self.sena_green, fg_color=self.bg_light)
         tabview.pack(fill="both", expand=True, padx=25, pady=15)
-        t_asis = tabview.add("🕒 HISTORIAL"); t_gest = tabview.add("👥 GESTIÓN"); t_reg = tabview.add("📝 REGISTRO"); t_pap = tabview.add("🗑️ PAPELERA")
-        for t in (t_asis, t_gest, t_reg, t_pap):
-            t.configure(fg_color=self.bg_light)
+        t_hist = tabview.add("🕒 HISTORIAL"); t_gest = tabview.add("👥 GESTIÓN"); t_reg = tabview.add("📝 REGISTRO"); t_pap = tabview.add("🗑️ PAPELERA"); t_rep = tabview.add("📊 REPORTES")
+        for t in (t_hist, t_gest, t_reg, t_pap, t_rep):
+            t.configure(fg_color=self.sena_dark, border_width=1, border_color="#DDD", corner_radius=20)
 
-        def refresh_asis():
-            for i in tv_asis.get_children(): tv_asis.delete(i)
+        def refresh_hist():
+            for i in tv_hist.get_children(): tv_hist.delete(i)
             self.db.cursor.execute("SELECT a.id_asistencia, a.documento_estudiante, e.nombre_completo, a.fecha_registro, a.fecha_salida FROM asistencias a JOIN estudiantes e ON a.documento_estudiante = e.documento ORDER BY a.fecha_registro DESC LIMIT 100")
             for r in self.db.cursor.fetchall():
                 sal = r['fecha_salida'].strftime('%H:%M') if r['fecha_salida'] else "PENDIENTE"
-                tv_asis.insert("", "end", values=(r['documento_estudiante'], r['nombre_completo'], r['fecha_registro'].strftime('%d/%m %H:%M'), sal))
-        tv_f1 = tk.Frame(t_asis, bg="#f7f7f7"); tv_f1.pack(fill="both", expand=True, padx=12, pady=12)
-        tv_asis = ttk.Treeview(tv_f1, columns=("DOC", "NOMBRE", "IN", "OUT"), show="headings"); [tv_asis.heading(c, text=c) for c in ("DOC", "NOMBRE", "IN", "OUT")]; tv_asis.pack(fill="both", expand=True); refresh_asis()
+                tv_hist.insert("", "end", values=(r['documento_estudiante'], r['nombre_completo'], r['fecha_registro'].strftime('%d/%m %H:%M'), sal))
+        tv_f1 = tk.Frame(t_hist, bg="#f7f7f7", borderwidth=1, relief="solid"); tv_f1.pack(fill="both", expand=True, padx=12, pady=12)
+        tv_hist = ttk.Treeview(tv_f1, columns=("DOC", "NOMBRE", "IN", "OUT"), show="headings"); [tv_hist.heading(c, text=c) for c in ("DOC", "NOMBRE", "IN", "OUT")]; tv_hist.pack(fill="both", expand=True); refresh_hist()
 
         f_bus = ctk.CTkFrame(t_gest, fg_color="transparent"); f_bus.pack(fill="x", padx=20, pady=15)
         ent_bus = ctk.CTkEntry(f_bus, placeholder_text="Buscar aprendiz...", width=420); ent_bus.pack(side="left", padx=10)
@@ -263,13 +266,12 @@ class SistemaHSGSCRS:
                 {k: v.get() for k, v in entries.items()}, 
                 cb_f.get().split(" | ")[0] if cb_f.get() else None
             )
-            
             if exito:
                 messagebox.showinfo("C.R.S", mensaje)
-                [v.delete(0, 'end') for v in entries.values()] # Limpiar campos
-                filtrar() # Recargar tabla
+                [v.delete(0, 'end') for v in entries.values()] 
+                filtrar() 
             else:
-                # Si hubo error (como el duplicado), mostrar advertencia
+                
                 messagebox.showwarning("Atención", mensaje)
         ctk.CTkButton(f_reg_m, text="💾 GUARDAR", command=save).pack(pady=15)
         ctk.CTkButton(t_reg, text="📂 CARGA EXCEL", fg_color="#333", command=self.servicio.importar_excel).pack()
@@ -277,12 +279,7 @@ class SistemaHSGSCRS:
         def limpiar():
             for e in entries.values(): e.delete(0, 'end')
             cb_f.set('')
-
-        # Botón Limpiar (añádelo debajo del botón GUARDAR)
         ctk.CTkButton(f_reg_m, text="🧹 LIMPIAR", fg_color="#555", command=limpiar).pack(pady=5)
-        
-        
-
         tv_f3 = tk.Frame(t_pap, bg=self.bg_light); tv_f3.pack(fill="both", expand=True, padx=20, pady=12)
         tv_pap = ttk.Treeview(tv_f3, columns=("DOC", "NOMBRE", "FICHA"), show="headings", selectmode='extended'); [tv_pap.heading(c, text=c) for c in ("DOC", "NOMBRE", "FICHA")]; tv_pap.pack(fill="both", expand=True)
         
@@ -309,7 +306,48 @@ class SistemaHSGSCRS:
                 refresh_pap()
         ctk.CTkButton(btn_p, text="♻️ RESTAURAR", fg_color=self.sena_green, command=restaurar).pack(side="left", padx=10)
         ctk.CTkButton(btn_p, text="🔥 ELIMINAR", fg_color="black", command=eliminar).pack(side="left", padx=10); refresh_pap()
+        
+        
+        f_rep_m = ctk.CTkFrame(t_rep, corner_radius=20, fg_color="white", border_width=1, border_color="#EEE")
+        f_rep_m.pack(pady=20, padx=50, fill="x")
+        
+        grid_rep = tk.Frame(f_rep_m, bg="white")
+        grid_rep.pack(pady=20, padx=25)
 
+        
+        ctk.CTkLabel(grid_rep, text="Ficha", text_color="gray").grid(row=0, column=0, padx=12)
+        self.combo_ficha_rep = ttk.Combobox(grid_rep, state="readonly", width=30)
+        self.combo_ficha_rep.grid(row=1, column=0, padx=5, pady=5)
+        
+        fichas_data = [f"{f['id_ficha']} | {f['nombre_programa']}" for f in self.servicio.obtener_fichas()]
+        self.combo_ficha_rep['values'] = ["Todas"] + fichas_data
+        self.combo_ficha_rep.set("Todas")
+
+        ctk.CTkLabel(grid_rep, text="Documento Aprendiz", text_color="gray").grid(row=0, column=1, padx=12)
+        self.ent_aprendiz_rep = ctk.CTkEntry(grid_rep, width=190, placeholder_text="Opcional...")
+        self.ent_aprendiz_rep.grid(row=1, column=1, padx=5, pady=5)
+
+        ctk.CTkLabel(grid_rep, text="Rango", text_color="gray").grid(row=0, column=2, padx=12)
+        self.seg_tiempo = ctk.CTkSegmentedButton(grid_rep, values=["Día", "Semana", "Mes"])
+        self.seg_tiempo.set("Día")
+        self.seg_tiempo.grid(row=1, column=2, padx=12)
+
+        
+        def lanzar_reporte():
+            
+            messagebox.showinfo("C.R.S", "Generando estadísticas en el Canvas...")
+            
+
+        ctk.CTkButton(f_rep_m, text="📊 GENERAR ESTADÍSTICAS", command=lanzar_reporte).pack(pady=15)
+
+        
+        self.canvas_rep = tk.Canvas(t_rep, bg="white", height=250, highlightthickness=1, highlightbackground="#DDD")
+        self.canvas_rep.pack(fill="both", expand=True, padx=50, pady=10)
+        
+    
+        self.canvas_rep.create_text(200, 100, text="Seleccione filtros y presione Generar para ver métricas", fill="gray")
+        
+        
     def actualizar_password_ventana(self, documento):
         v = tk.Toplevel(self.root); v.title("Seguridad C.R.G"); v.geometry("450x520"); v.configure(bg=self.bg_light); v.grab_set()
         tk.Label(v, text="🔒 CAMBIO OBLIGATORIO", font=("bold", 12), bg=self.bg_light, fg="#d32f2f").pack(pady=10)
