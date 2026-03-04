@@ -873,6 +873,10 @@ class SistemaHSGSCRS:
         
     def actualizar_password_ventana(self, documento):
         v = tk.Toplevel(self.root); v.title("Seguridad C.R.S"); v.geometry("450x520"); v.configure(bg=self.bg_light); v.grab_set()
+        # impedir cerrar la ventana sin actualizar contraseña
+        def bloquear_cierre():
+            messagebox.showwarning("Obligatorio", "Debe cambiar la contraseña antes de continuar.")
+        v.protocol("WM_DELETE_WINDOW", bloquear_cierre)
         tk.Label(v, text="🔒 CAMBIO OBLIGATORIO", font=("bold", 12), bg=self.bg_light, fg="#d32f2f").pack(pady=10)
         pass_var = tk.StringVar(); e = ttk.Entry(v, show="*", textvariable=pass_var, font=("Segoe UI", 12)); e.pack(pady=10, padx=40, fill="x")
         req_frame = tk.Frame(v, bg=self.bg_light); req_frame.pack(pady=10, padx=40, fill="x")
@@ -892,7 +896,8 @@ class SistemaHSGSCRS:
         def save():
             if validar():
                 self.db.cursor.execute("UPDATE estudiantes SET password=%s, cambio_pass=1 WHERE documento=%s", (pass_var.get(), documento))
-                self.db.conexion.commit(); messagebox.showinfo("C.R.S", "Seguridad configurada"); v.destroy()
+                self.db.conexion.commit(); messagebox.showinfo("C.R.S", "Seguridad configurada");
+                v.destroy()
         tk.Button(v, text="GUARDAR Y ENTRAR", bg="#39A900", fg="white", command=save).pack(pady=20)
 
 if __name__ == "__main__":

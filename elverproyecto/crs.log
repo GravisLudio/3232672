@@ -62,3 +62,5 @@ mysql.connector.errors.DatabaseError: 2003 (HY000): Can't connect to MySQL serve
 2026-03-04 14:26:17,532 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
 2026-03-04 16:12:22,864 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
 2026-03-04 16:13:05,093 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 16:16:17,261 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 16:17:57,236 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
