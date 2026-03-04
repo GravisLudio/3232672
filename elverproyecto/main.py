@@ -230,6 +230,10 @@ class SistemaHSGSCRS:
         ctk.CTkLabel(f, text="ADMINISTRACIÓN", font=("Segoe UI", 24, "bold")).pack(pady=35, padx=20)
         u_ent = ctk.CTkEntry(f, placeholder_text="Usuario", width=300, height=50); u_ent.pack(pady=12, padx=20)
         p_ent = ctk.CTkEntry(f, placeholder_text="Contraseña", show="*", width=300, height=50); p_ent.pack(pady=12, padx=20)
+        # permitir enviar formulario con Enter cuando ambos campos estén llenos
+        def try_login(event=None):
+            if u_ent.get() and p_ent.get():
+                log_admin()
         def log_admin():
             usuario = u_ent.get()
             self.db.cursor.execute("SELECT * FROM usuarios_admin WHERE usuario=%s AND password=%s", (usuario, p_ent.get()))
@@ -241,6 +245,9 @@ class SistemaHSGSCRS:
                     logging.error("Error registrando auditoría (login admin)", exc_info=True)
                 self.mostrar_panel_admin_ui()
             else: messagebox.showerror("Denegado", "Usuario o clave incorrecta")
+        # binding de tecla Enter
+        u_ent.bind("<Return>", try_login)
+        p_ent.bind("<Return>", try_login)
         ctk.CTkButton(f, text="ACCEDER AL PANEL", width=300, height=55, command=log_admin).pack(pady=35, padx=20)
         ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack(padx=20)
 
