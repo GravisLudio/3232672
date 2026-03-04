@@ -70,8 +70,17 @@ class SistemaHSGSCRS:
 
     def lanzar_sistema(self):
         self.root.deiconify() 
-        self.root.state('zoomed') 
+        self.root.state('zoomed')
+        # Forzar que siempre esté zoomed
+        self.root.bind('<Configure>', self._forzar_zoom)
+        # Deshabilitar minimizar
+        self.root.resizable(False, False)
         self.animacion_entrada()
+    
+    def _forzar_zoom(self, event=None):
+        """Fuerza que la ventana siempre esté maximizada"""
+        if self.root.state() != 'zoomed':
+            self.root.state('zoomed')
         
     def limpiar_pantalla(self):
         for widget in self.main_container.winfo_children():
@@ -127,68 +136,223 @@ class SistemaHSGSCRS:
             self.lbl_nombre.configure(font=("Segoe UI", size, "bold"))
             self.root.after(10, lambda: self.efecto_pop(size))
         else:
-            self.root.after(2000, self.mostrar_inicio)
+            self.root.after(2000, self.mostrar_terminal)
 
 
     
     def mostrar_inicio(self):
         self.limpiar_pantalla()
-        f = ctk.CTkFrame(self.main_container, width=500, height=550, corner_radius=20,
-                         fg_color=self.bg_light, border_width=2, border_color="#E0E0E0")
-        f.place(relx=0.5, rely=0.5, anchor="center")
-
-        ctk.CTkLabel(f, text="GATEWAY C.R.S", font=("Segoe UI", 32, "bold"), text_color=self.sena_dark).pack(pady=(50, 5))
-        ctk.CTkLabel(f, text="Chronos Registry System | High Softwares", font=("Segoe UI", 13), text_color="#888").pack(pady=(0, 40))
-
-        ctk.CTkButton(f, text="TERMINAL APRENDICES", height=55, width=350, corner_radius=10,
-                       command=self.mostrar_terminal).pack(pady=10, padx=20)
-        ctk.CTkButton(f, text="PANEL ADMINISTRATIVO", height=55, width=350, corner_radius=10,
-                       fg_color="#333", hover_color="#1a1a1a", command=self.mostrar_login).pack(pady=10, padx=20)
-        ctk.CTkButton(f, text="MI PERFIL (APRENDIZ)", height=55, width=350, corner_radius=10,
-                       fg_color="transparent", text_color=self.sena_green, border_width=2,
-                       border_color=self.sena_green, hover_color="#E8F5E9", command=self.login_aprendiz_view).pack(pady=10, padx=20)
+        
+        # Frame principal con gradiente visual
+        f_main = ctk.CTkFrame(self.main_container, fg_color=self.bg_light)
+        f_main.pack(fill="both", expand=True)
+        
+        # Header superior con título principal
+        f_header = ctk.CTkFrame(f_main, fg_color=self.sena_green, height=150)
+        f_header.pack(fill="x")
+        
+        ctk.CTkLabel(f_header, text="C.R.S", font=("Segoe UI", 28, "bold"), 
+                    text_color="white").pack(pady=(20, 5))
+        ctk.CTkLabel(f_header, text="CHRONOS REGISTRY SYSTEM", font=("Segoe UI", 16, "bold"), 
+                    text_color="white").pack(pady=(0, 10))
+        ctk.CTkLabel(f_header, text="Sistema Integrado de Registro de Asistencia | High Softwares", 
+                    font=("Segoe UI", 11), text_color="#E8F5E9").pack(pady=(0, 20))
+        
+        # Contenedor central
+        f_center = ctk.CTkFrame(f_main, fg_color="transparent")
+        f_center.pack(fill="both", expand=True, padx=50, pady=40)
+        
+        # Frame para opciones
+        f_options = ctk.CTkFrame(f_center, fg_color=self.bg_light, corner_radius=25, 
+                                border_width=2, border_color="#E0E0E0")
+        f_options.pack(fill="both", expand=True, padx=50, pady=30)
+        
+        # Titulo de opciones
+        ctk.CTkLabel(f_options, text="ACCESO AL SISTEMA", font=("Segoe UI", 24, "bold"), 
+                    text_color=self.sena_dark).pack(pady=(40, 10))
+        ctk.CTkLabel(f_options, text="Selecciona tu rol para continuar", font=("Segoe UI", 12), 
+                    text_color="#888").pack(pady=(0, 40))
+        
+        # Contenedor de botones
+        f_btns = ctk.CTkFrame(f_options, fg_color="transparent")
+        f_btns.pack(pady=20)
+        
+        # Botón Terminal (Registro de Asistencia)
+        btn_terminal = ctk.CTkButton(f_btns, text="📱 REGISTRO DE ASISTENCIA", height=65, width=450, 
+                                    font=("Segoe UI", 14, "bold"), fg_color=self.sena_green, 
+                                    hover_color=self.sena_dark, command=self.mostrar_terminal)
+        btn_terminal.pack(pady=15)
+        ToolTip(btn_terminal, "Registra tu entrada y salida")
+        
+        # Botón Login Unificado
+        btn_login = ctk.CTkButton(f_btns, text="🔐 LOGIN", height=65, width=450, 
+                                 font=("Segoe UI", 14, "bold"), fg_color="#333", 
+                                 hover_color="#111", command=self.mostrar_login_unificado)
+        btn_login.pack(pady=15)
+        ToolTip(btn_login, "Acceso al panel de administración o tu perfil")
 
     def mostrar_terminal(self):
         self.limpiar_pantalla()
-        head = ctk.CTkFrame(self.main_container, height=70, corner_radius=0, fg_color=self.sena_green); head.pack(fill="x")
-        ctk.CTkButton(head, text="⬅ VOLVER", width=140, fg_color=self.sena_dark, command=self.mostrar_inicio).pack(side="left", padx=25, pady=15)
-        f = ctk.CTkFrame(self.main_container, width=650, height=550, corner_radius=25, fg_color=self.bg_light, border_width=1, border_color="#DDD"); f.place(relx=0.5, rely=0.5, anchor="center")
-        ctk.CTkLabel(f, text="REGISTRO DE ASISTENCIA", font=("Segoe UI", 26, "bold")).pack(pady=35)
-        ent_doc = ctk.CTkEntry(f, font=("Segoe UI", 30), width=480, height=80, placeholder_text="N° Documento", justify="center"); ent_doc.pack(pady=25); ent_doc.focus()
-
+        
+        # Header superior
+        head = ctk.CTkFrame(self.main_container, height=70, corner_radius=0, fg_color=self.sena_green)
+        head.pack(fill="x")
+        ctk.CTkButton(head, text="⬅ VOLVER", width=140, fg_color=self.sena_dark, 
+                     command=self.mostrar_inicio).pack(side="left", padx=25, pady=15)
+        
+        # Body principal
+        body = ctk.CTkFrame(self.main_container, fg_color=self.bg_light)
+        body.pack(fill="both", expand=True)
+        
+        # Frame central para el contenido
+        f_center = ctk.CTkFrame(body, fg_color="transparent")
+        f_center.pack(fill="both", expand=True, padx=50, pady=60)
+        
+        # Tarjeta principal de registro
+        f = ctk.CTkFrame(f_center, width=700, height=600, corner_radius=25, 
+                        fg_color=self.bg_light, border_width=2, border_color=self.sena_green)
+        f.pack(pady=50, padx=20)
+        
+        # Título
+        f_title = ctk.CTkFrame(f, fg_color=self.sena_green, corner_radius=20)
+        f_title.pack(fill="x", pady=20, padx=20)
+        
+        ctk.CTkLabel(f_title, text="⏱️ REGISTRO DE ASISTENCIA", font=("Segoe UI", 26, "bold"), 
+                    text_color="white").pack(pady=20)
+        ctk.CTkLabel(f_title, text="Chronos Registry System", font=("Segoe UI", 11), 
+                    text_color="#E8F5E9").pack(pady=(0, 15))
+        
+        # Entrada de documento
+        ent_doc = ctk.CTkEntry(f, font=("Segoe UI", 32), width=550, height=85, 
+                              placeholder_text="N° Documento", justify="center", 
+                              border_width=2, border_color=self.sena_green)
+        ent_doc.pack(pady=35, padx=30)
+        ent_doc.focus()
+        
+        # Botones de acción
+        f_btns = ctk.CTkFrame(f, fg_color="transparent")
+        f_btns.pack(pady=30)
+        
         def procesar(tipo):
             exito, msg = self.servicio.registrar_entrada(ent_doc.get()) if tipo=="in" else self.servicio.registrar_salida(ent_doc.get())
-            if exito: messagebox.showinfo("C.R.S", msg); ent_doc.delete(0, tk.END)
-            else: messagebox.showwarning("Atención", msg)
-
-        ctk.CTkButton(f, text=" MARCAR ENTRADA", font=("bold", 16), height=65, width=450, command=lambda:procesar("in")).pack(pady=10)
-        ctk.CTkButton(f, text=" MARCAR SALIDA", font=("bold", 16), height=65, width=450, fg_color="#E67E22", hover_color="#D35400", command=lambda:procesar("out")).pack(pady=10)
-
-    def login_aprendiz_view(self):
-        self.limpiar_pantalla()
-        f = ctk.CTkFrame(self.main_container, width=450, height=480, corner_radius=25,
-                         fg_color=self.bg_light, border_width=2, border_color="#DDD")
-        f.place(relx=0.5, rely=0.5, anchor="center")
-
-        ctk.CTkLabel(f, text="ACCESO APRENDIZ", font=("Segoe UI", 24, "bold")).pack(pady=35)
-        u_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Documento"); u_ent.pack(pady=12, padx=20)
-        p_ent = ctk.CTkEntry(f, width=320, height=50, placeholder_text="Contraseña", show="*"); p_ent.pack(pady=12, padx=20)
+            if exito: 
+                messagebox.showinfo("✅ C.R.S", msg)
+                ent_doc.delete(0, tk.END)
+                ent_doc.focus()
+            else: 
+                messagebox.showwarning("⚠️ Atención", msg)
+                ent_doc.delete(0, tk.END)
+                ent_doc.focus()
         
-        def entrar(u_ent, p_ent):
-            user = self.servicio.login_aprendiz(u_ent.get(), p_ent.get())
-            if user:
-                self.aprendiz_actual = u_ent.get()
+        ctk.CTkButton(f_btns, text="📥 MARCAR ENTRADA", font=("Segoe UI", 15, "bold"), 
+                     height=70, width=500, fg_color=self.sena_green, 
+                     hover_color=self.sena_dark, command=lambda:procesar("in")).pack(pady=12, padx=20)
+        
+        ctk.CTkButton(f_btns, text="📤 MARCAR SALIDA", font=("Segoe UI", 15, "bold"), 
+                     height=70, width=500, fg_color="#E67E22", 
+                     hover_color="#D35400", command=lambda:procesar("out")).pack(pady=12, padx=20)
+        
+        # Footer con logo SENA - integrado con background
+        f_footer = ctk.CTkFrame(body, fg_color=self.bg_light, height=80)
+        f_footer.pack(fill="x", side="bottom")
+        
+        try:
+            sena_logo = tk.PhotoImage(file="c:\\Users\\Jhoan Diaz\\Documents\\GitHub\\3232672\\elverproyecto\\images\\logosena.png")
+            # Redimensionar logo
+            sena_logo = sena_logo.subsample(3, 3)
+            lbl_logo = tk.Label(f_footer, image=sena_logo, bg=self.bg_light)
+            lbl_logo.image = sena_logo
+            lbl_logo.pack(side="right", padx=20, pady=10)
+        except Exception as e:
+            logging.warning(f"No se pudo cargar logo SENA: {e}")
+            ctk.CTkLabel(f_footer, text="SENA", font=("Segoe UI", 12, "bold"), 
+                        text_color=self.sena_green).pack(side="right", padx=20)
+
+    def mostrar_login_unificado(self):
+        """Pantalla unificada de login que detecta automáticamente si es Admin o Aprendiz"""
+        self.limpiar_pantalla()
+        
+        f = ctk.CTkFrame(self.main_container, width=500, height=580, corner_radius=25,
+                         fg_color=self.bg_light, border_width=2, border_color="#333")
+        f.place(relx=0.5, rely=0.5, anchor="center")
+        
+        # Header
+        f_header = ctk.CTkFrame(f, fg_color="#333", corner_radius=20)
+        f_header.pack(fill="x", padx=15, pady=15)
+        
+        ctk.CTkLabel(f_header, text="🔐 ACCESO", font=("Segoe UI", 22, "bold"), 
+                    text_color="white").pack(pady=20)
+        
+        ctk.CTkLabel(f, text="Administrador o Aprendiz", font=("Segoe UI", 11), 
+                    text_color="#888").pack(pady=(20, 30))
+        
+        # Campos de entrada
+        usuario_ent = ctk.CTkEntry(f, width=380, height=55, placeholder_text="Usuario / Documento", 
+                                   font=("Segoe UI", 13), border_width=2, border_color="#333")
+        usuario_ent.pack(pady=15, padx=30)
+        
+        password_ent = ctk.CTkEntry(f, width=380, height=55, placeholder_text="Contraseña", 
+                                    show="*", font=("Segoe UI", 13), border_width=2, border_color="#333")
+        password_ent.pack(pady=15, padx=30)
+        
+        # Label para mostrar estado
+        lbl_estado = ctk.CTkLabel(f, text="", font=("Segoe UI", 10), text_color="#E74C3C")
+        lbl_estado.pack(pady=10)
+        
+        def intentar_login():
+            usuario = usuario_ent.get().strip()
+            password = password_ent.get()
+            
+            if not usuario or not password:
+                lbl_estado.configure(text="⚠️ Completa todos los campos")
+                return
+            
+            lbl_estado.configure(text="Verificando...")
+            self.root.update()
+            
+            # Intentar como ADMINISTRADOR primero
+            self.db.cursor.execute("SELECT * FROM usuarios_admin WHERE usuario=%s AND password=%s", 
+                                  (usuario, password))
+            admin = self.db.cursor.fetchone()
+            
+            if admin:
+                self.admin_actual = usuario
+                try:
+                    self.db.registrar_auditoria(self.admin_actual, "login admin")
+                except Exception as ex:
+                    logging.error("Error registrando auditoría (login admin)", exc_info=True)
+                self.mostrar_panel_admin_ui()
+                return
+            
+            # Intentar como APRENDIZ
+            aprendiz = self.servicio.login_aprendiz(usuario, password)
+            
+            if aprendiz:
+                self.aprendiz_actual = usuario
                 if not self.db.registrar_auditoria(self.aprendiz_actual, "login aprendiz"):
                     logging.warning("Advertencia: No se pudo registrar la auditoría de login.")
-                if user.get('cambio_pass') == 0 or p_ent.get() == 'sena123': self.actualizar_password_ventana(user['documento'])
-                self.mostrar_panel_aprendiz(user)
-            else: messagebox.showerror("Error", "Credenciales Incorrectas")
-        
-        ctk.CTkButton(f, text="INGRESAR", width=320, height=55, command=lambda:entrar(u_ent, p_ent)).pack(pady=35, padx=20)
-        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack(padx=20)
+                if aprendiz.get('cambio_pass') == 0 or password == 'sena123': 
+                    self.actualizar_password_ventana(aprendiz['documento'])
+                self.mostrar_panel_aprendiz(aprendiz)
+                return
             
+            # Si llegamos aquí, credenciales inválidas
+            lbl_estado.configure(text="❌ Credenciales incorrectas")
+            password_ent.delete(0, tk.END)
+            usuario_ent.focus()
         
+        def try_login_enter(event=None):
+            if usuario_ent.get() and password_ent.get():
+                intentar_login()
         
+        usuario_ent.bind("<Return>", try_login_enter)
+        password_ent.bind("<Return>", try_login_enter)
+        
+        ctk.CTkButton(f, text="INGRESAR", width=380, height=60, font=("Segoe UI", 14, "bold"),
+                     fg_color="#333", hover_color="#111", command=intentar_login).pack(pady=25, padx=30)
+        
+        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", 
+                     border_width=1, border_color="gray", command=self.mostrar_inicio).pack(padx=30)
 
     def mostrar_panel_aprendiz(self, user):
         self.limpiar_pantalla()
@@ -224,32 +388,6 @@ class SistemaHSGSCRS:
                     if r['fecha_salida']: ctk.CTkLabel(card, text=f"📤 Sal: {r['fecha_salida'].strftime('%H:%M')}", font=("Segoe UI", 11), text_color="#E67E22").pack(side="right", padx=15)
         cal.bind("<<CalendarSelected>>", actualizar_cards); actualizar_cards()
 
-    def mostrar_login(self):
-        self.limpiar_pantalla()
-        f = ctk.CTkFrame(self.main_container, width=420, height=480, corner_radius=25, fg_color=self.bg_light, border_width=2, border_color="#DDD"); f.place(relx=0.5, rely=0.5, anchor="center")
-        ctk.CTkLabel(f, text="ADMINISTRACIÓN", font=("Segoe UI", 24, "bold")).pack(pady=35, padx=20)
-        u_ent = ctk.CTkEntry(f, placeholder_text="Usuario", width=300, height=50); u_ent.pack(pady=12, padx=20)
-        p_ent = ctk.CTkEntry(f, placeholder_text="Contraseña", show="*", width=300, height=50); p_ent.pack(pady=12, padx=20)
-        # permitir enviar formulario con Enter cuando ambos campos estén llenos
-        def try_login(event=None):
-            if u_ent.get() and p_ent.get():
-                log_admin()
-        def log_admin():
-            usuario = u_ent.get()
-            self.db.cursor.execute("SELECT * FROM usuarios_admin WHERE usuario=%s AND password=%s", (usuario, p_ent.get()))
-            if self.db.cursor.fetchone():
-                self.admin_actual = usuario
-                try:
-                    self.db.registrar_auditoria(self.admin_actual, "login admin")
-                except Exception as ex:
-                    logging.error("Error registrando auditoría (login admin)", exc_info=True)
-                self.mostrar_panel_admin_ui()
-            else: messagebox.showerror("Denegado", "Usuario o clave incorrecta")
-        # binding de tecla Enter
-        u_ent.bind("<Return>", try_login)
-        p_ent.bind("<Return>", try_login)
-        ctk.CTkButton(f, text="ACCEDER AL PANEL", width=300, height=55, command=log_admin).pack(pady=35, padx=20)
-        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack(padx=20)
 
     def mostrar_panel_admin_ui(self):
         self.limpiar_pantalla()
