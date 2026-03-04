@@ -18,3 +18,39 @@
 2026-03-02 15:39:25,821 INFO mysql.connector: plugin_name: caching_sha2_password
 2026-03-02 15:39:25,821 INFO mysql.connector: AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
 2026-03-02 15:39:25,823 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 13:40:50,863 ERROR root: Error crítico de conexión HSGS: 2003 (HY000): Can't connect to MySQL server on 'localhost:3306' (10061)
+Traceback (most recent call last):
+  File "C:\Users\Jhoan Diaz\AppData\Local\Programs\Python\Python314\Lib\site-packages\mysql\connector\connection_cext.py", line 354, in _open_connection
+    self._cmysql.connect(**cnx_kwargs)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+_mysql_connector.MySQLInterfaceError: Can't connect to MySQL server on 'localhost:3306' (10061)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Jhoan Diaz\Documents\GitHub\3232672\elverproyecto\conexion.py", line 35, in __init__
+    self.conexion = mysql.connector.connect(
+                    ~~~~~~~~~~~~~~~~~~~~~~~^
+        host=host,
+        ^^^^^^^^^^
+    ...<2 lines>...
+        database=database
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Jhoan Diaz\AppData\Local\Programs\Python\Python314\Lib\site-packages\mysql\connector\pooling.py", line 322, in connect
+    return CMySQLConnection(*args, **kwargs)
+  File "C:\Users\Jhoan Diaz\AppData\Local\Programs\Python\Python314\Lib\site-packages\mysql\connector\connection_cext.py", line 142, in __init__
+    self.connect(**kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\Jhoan Diaz\AppData\Local\Programs\Python\Python314\Lib\site-packages\mysql\connector\abstracts.py", line 1604, in connect
+    self._open_connection()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Jhoan Diaz\AppData\Local\Programs\Python\Python314\Lib\site-packages\mysql\connector\connection_cext.py", line 360, in _open_connection
+    raise get_mysql_exception(
+        err.errno, msg=err.msg, sqlstate=err.sqlstate
+    ) from err
+mysql.connector.errors.DatabaseError: 2003 (HY000): Can't connect to MySQL server on 'localhost:3306' (10061)
+2026-03-04 13:43:19,629 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 13:49:44,913 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 13:58:16,235 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.

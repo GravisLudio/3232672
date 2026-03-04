@@ -59,7 +59,7 @@ class SistemaHSGSCRS:
         self.aprendiz_actual = None 
         self.sena_green = "#39A900"
         self.sena_dark = "#2D5A27"
-        self.bg_light = "#E2E2E2"
+        self.bg_light = "#FFFFFF"
 
         self.main_container = ctk.CTkFrame(self.root, fg_color=self.bg_light, corner_radius=0)
         self.main_container.pack(fill="both", expand=True)
