@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 02-03-2026 a las 07:08:38
+-- Tiempo de generación: 04-03-2026 a las 21:18:49
 -- Versión del servidor: 9.1.0
 -- Versión de PHP: 8.3.14
 
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS `auditoria` (
   `detalles` text CHARACTER SET utf8mb3 COLLATE utf8mb3_spanish2_ci,
   `fecha` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=82 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_spanish2_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=86 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_spanish2_ci;
 
 --
 -- Volcado de datos para la tabla `auditoria`
@@ -153,7 +153,11 @@ INSERT INTO `auditoria` (`id`, `usuario`, `accion`, `objeto`, `detalles`, `fecha
 (78, 'admin', 'login admin', '', '', '2026-03-01 23:58:52'),
 (79, 'admin', 'login admin', '', '', '2026-03-02 00:48:21'),
 (80, 'admin', 'login admin', '', '', '2026-03-02 00:52:19'),
-(81, 'admin', 'login admin', '', '', '2026-03-02 02:07:48');
+(81, 'admin', 'login admin', '', '', '2026-03-02 02:07:48'),
+(82, 'admin', 'login admin', '', '', '2026-03-04 14:05:34'),
+(83, 'admin', 'logout admin', '', '', '2026-03-04 14:08:14'),
+(84, 'admin', 'login admin', '', '', '2026-03-04 14:09:04'),
+(85, 'admin', 'logout admin', '', '', '2026-03-04 14:10:16');
 
 -- --------------------------------------------------------
 
@@ -341,6 +345,25 @@ INSERT INTO `horarios` (`id_horario`, `id_competencia`, `dia_semana`, `hora_inic
 (8, 36, 'Miércoles', '12:00:00', '18:00:00', 6),
 (9, 34, 'Jueves', '12:00:00', '18:00:00', 6),
 (10, 35, 'Viernes', '12:00:00', '18:00:00', 6);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `instructores`
+--
+
+DROP TABLE IF EXISTS `instructores`;
+CREATE TABLE IF NOT EXISTS `instructores` (
+  `id_instructor` int NOT NULL AUTO_INCREMENT,
+  `cedula` varchar(20) NOT NULL,
+  `nombre_completo` varchar(150) NOT NULL,
+  `id_competencia` int DEFAULT NULL,
+  `password` varchar(255) NOT NULL,
+  `fecha_registro` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_instructor`),
+  UNIQUE KEY `cedula` (`cedula`),
+  KEY `id_competencia` (`id_competencia`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 

@@ -1,5 +1,10 @@
 import mysql.connector
 from mysql.connector import Error
+import os
+import logging
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class InventarioDB:
     """Encapsula la conexión y las operaciones básicas contra MySQL.
@@ -22,18 +27,23 @@ class InventarioDB:
     def __init__(self):
         """Establece la conexión con la base de datos TechSenaHSGS de HSGS."""
         try:
+            host = os.getenv('DB_HOST', 'localhost')
+            user = os.getenv('DB_USER', 'root')
+            password = os.getenv('DB_PASSWORD', '')
+            database = os.getenv('DB_NAME', 'TechSenaHSGS')
+
             self.conexion = mysql.connector.connect(
-                host='localhost',
-                user='root',      # Usuario por defecto en XAMPP/WAMP
-                password='',      # Contraseña por defecto (vacía)
-                database='TechSenaHSGS' 
+                host=host,
+                user=user,
+                password=password,
+                database=database
             )
             if self.conexion.is_connected():
                 # dictionary=True permite acceder a los datos por nombre de columna
                 self.cursor = self.conexion.cursor(dictionary=True, buffered=True)
-                print("Conexión exitosa a la red HSGS.")
+                logging.info("Conexión exitosa a la base de datos TechSenaHSGS.")
         except Error as e:
-            print(f"Error crítico de conexión HSGS: {e}")
+            logging.error(f"Error crítico de conexión HSGS: {e}", exc_info=True)
             self.conexion = None
 
     def insertar(self, documento, id_competencia, observaciones=""):
