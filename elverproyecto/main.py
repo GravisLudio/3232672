@@ -226,10 +226,10 @@ class SistemaHSGSCRS:
 
     def mostrar_login(self):
         self.limpiar_pantalla()
-        f = ctk.CTkFrame(self.main_container, width=420, height=480, corner_radius=25, fg_color=self.bg_light); f.place(relx=0.5, rely=0.5, anchor="center")
-        ctk.CTkLabel(f, text="ADMINISTRACIÓN", font=("Segoe UI", 24, "bold")).pack(pady=35)
-        u_ent = ctk.CTkEntry(f, placeholder_text="Usuario", width=300, height=50); u_ent.pack(pady=12)
-        p_ent = ctk.CTkEntry(f, placeholder_text="Contraseña", show="*", width=300, height=50); p_ent.pack(pady=12)
+        f = ctk.CTkFrame(self.main_container, width=420, height=480, corner_radius=25, fg_color=self.bg_light, border_width=2, border_color="#DDD"); f.place(relx=0.5, rely=0.5, anchor="center")
+        ctk.CTkLabel(f, text="ADMINISTRACIÓN", font=("Segoe UI", 24, "bold")).pack(pady=35, padx=20)
+        u_ent = ctk.CTkEntry(f, placeholder_text="Usuario", width=300, height=50); u_ent.pack(pady=12, padx=20)
+        p_ent = ctk.CTkEntry(f, placeholder_text="Contraseña", show="*", width=300, height=50); p_ent.pack(pady=12, padx=20)
         def log_admin():
             usuario = u_ent.get()
             self.db.cursor.execute("SELECT * FROM usuarios_admin WHERE usuario=%s AND password=%s", (usuario, p_ent.get()))
@@ -241,8 +241,8 @@ class SistemaHSGSCRS:
                     logging.error("Error registrando auditoría (login admin)", exc_info=True)
                 self.mostrar_panel_admin_ui()
             else: messagebox.showerror("Denegado", "Usuario o clave incorrecta")
-        ctk.CTkButton(f, text="ACCEDER AL PANEL", width=300, height=55, command=log_admin).pack(pady=35)
-        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack()
+        ctk.CTkButton(f, text="ACCEDER AL PANEL", width=300, height=55, command=log_admin).pack(pady=35, padx=20)
+        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", command=self.mostrar_inicio).pack(padx=20)
 
     def mostrar_panel_admin_ui(self):
         self.limpiar_pantalla()
