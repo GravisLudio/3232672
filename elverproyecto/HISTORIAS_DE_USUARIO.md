@@ -1,154 +1,271 @@
-# Historias de Usuario - Sistema CRS (Chronos Registry System)
+# 📋 Historias de Usuario — C.R.S v2.0
+## Chronos Registry System | SENA - Centro de Gestión Administrativa HSGS
 
-## HU-001: Registrar Asistencia (Aprendiz)
+---
+
+## HU-001: Registrar Asistencia (Aprendiz — Terminal)
+
 **Como** aprendiz  
-**Quiero** marcar mi entrada/salida mediante documento  
-**Para que** se registre automáticamente mi asistencia
+**Quiero** marcar mi entrada o salida ingresando mi número de documento  
+**Para que** mi asistencia quede registrada automáticamente en el sistema
 
 **Criterios de aceptación:**
-- [ ] Pantalla terminal muestra input documento
-- [ ] Entrada: registra fecha_registro + compara con horario esperado
-- [ ] Salida: registra fecha_salida (solo si hay entrada activa)
-- [ ] Mensaje: "✓ Entrada registrada 07:45" o "⚠ Retardo 08:32"
-- [ ] Error si documento no existe o está en papelera
+- [x] La pantalla terminal muestra un campo grande para ingresar el documento
+- [x] Botón **MARCAR ENTRADA** registra `fecha_registro` con hora actual
+- [x] Botón **MARCAR SALIDA** registra `fecha_salida` (solo si hay entrada activa)
+- [x] Mensaje de confirmación: "✅ Entrada Registrada con éxito" o "✅ Salida Registrada correctamente"
+- [x] Error si el documento no existe en el sistema
+- [x] Error si el aprendiz está en la papelera: "Contacte al administrador"
+- [x] Error si intenta marcar entrada sin haber cerrado la anterior
+
+**Estado:** ✅ Implementado en `main.py` → `_procesar_asistencia()` + `logica.py` → `registrar_entrada/salida()`
 
 ---
 
-## HU-002: Ver Mi Historial de Asistencias (Aprendiz)
+## HU-002: Ver Mi Historial de Asistencias (Aprendiz — Panel Personal)
+
 **Como** aprendiz registrado  
-**Quiero** consultar mis asistencias por día/semana  
-**Para que** pueda verificar mi desempeño
+**Quiero** consultar mis asistencias en un calendario interactivo mensual  
+**Para que** pueda verificar mis días de presencia, entradas y salidas
 
 **Criterios de aceptación:**
-- [ ] Pantalla muestra calendario seleccionable
-- [ ] Seleccionar día → muestra entrada/salida de ese día
-- [ ] Card con hora entrada (📥) y salida (📤)
-- [ ] "Sin actividad este día" si no hay registros
-- [ ] Ordenado DESC por fecha_registro
+- [x] Pantalla muestra calendario mensual con días marcados por asistencia
+- [x] Al seleccionar un día, muestra tarjetas con hora de entrada y salida
+- [x] Mensaje "Sin actividad este día" si no hay registros
+- [x] Calendario actualiza automáticamente al cambiar de mes
+- [x] Panel derecho muestra "Actividad del día" con tarjetas por registro
+- [x] Registros de entrada y salida con formato de hora `HH:MM`
+
+**Estado:** ✅ Implementado en `dashboard_password.py` → `CalendarioPersonalizado` + `logica.py` → `obtener_registros_dia/mes()`
 
 ---
 
-## HU-003: Administrador Genera Reporte de Asistencias (Admin)
+## HU-003: Cambiar Contraseña Obligatorio al Primer Login
+
+**Como** aprendiz o instructor nuevo  
+**Quiero** ser forzado a cambiar mi contraseña al ingresar por primera vez  
+**Para que** mi cuenta sea segura y no use credenciales por defecto (`sena123`)
+
+**Criterios de aceptación:**
+- [x] Sistema detecta si `cambio_pass = 0` o si la clave es `sena123`
+- [x] Muestra ventana emergente de cambio de contraseña obligatorio
+- [x] Validación mínima de 4 caracteres para aprendices
+- [x] El sistema actualiza `cambio_pass = 1` en BD tras el cambio
+- [x] El usuario accede al panel solo después de cambiar la contraseña
+- [x] Aplica tanto a aprendices como a instructores
+
+**Estado:** ✅ Implementado en `dashboard_password.py` → `PasswordManager` y `main.py` → `actualizar_password_instructor_ventana()`
+
+---
+
+## HU-004: Login Unificado (Admin, Instructor y Aprendiz)
+
+**Como** usuario del sistema  
+**Quiero** acceder con mis credenciales desde una pantalla única de login  
+**Para que** el sistema me dirija automáticamente al panel correspondiente a mi rol
+
+**Criterios de aceptación:**
+- [x] Pantalla de login con dos columnas: decorativa (SENA orange) y formulario
+- [x] Sistema valida primero en `usuarios_admin` (admin e instructor)
+- [x] Si no coincide, valida en tabla `instructores`
+- [x] Si no coincide, valida en tabla `estudiantes` (aprendiz)
+- [x] Redirige automáticamente al panel correcto según rol
+- [x] Muestra error "Credenciales incorrectas" si ningún rol coincide
+- [x] Login registrado en tabla `auditoria`
+
+**Estado:** ✅ Implementado en `main.py` → `_procesar_login()`
+
+---
+
+## HU-005: Administrador Crea Aprendiz Manualmente
+
 **Como** administrador  
-**Quiero** generar reportes de asistencia por día/semana/mes para fichas o individuos  
-**Para que** evalúe desempeño y detecte patrones de inasistencia
+**Quiero** registrar un nuevo aprendiz ingresando sus datos en un formulario  
+**Para que** pueda acceder al sistema sin necesidad de un archivo Excel
 
 **Criterios de aceptación:**
-- [ ] Segmentado: selecciona rango (Día/Semana/Mes)
-- [ ] Filtros: Fichas O Aprendices individuales
-- [ ] Canvas muestra:
-  - **Día:** A (asistencias), F (faltas), R (retardos) en 1 barra
-  - **Semana:** 4 barras (semanas mes) con A/F/R c/u
-  - **Mes:** 12 barras (meses año) con A/F/R c/u
-- [ ] Colores: verde (>80%), naranja (30-80%), rojo (<30%)
-- [ ] Cálculo: Sesiones esperadas = días_hábiles × (horas_ficha / 6)
+- [x] Formulario con campos: documento, nombre completo, correo, ficha
+- [x] Validación de documento único (no duplicados)
+- [x] Validación de formato de correo electrónico
+- [x] Contraseña por defecto: `sena123` (se fuerza cambio en primer login)
+- [x] Confirmación: "✅ Aprendiz creado exitosamente"
+- [x] Botón para limpiar el formulario
+- [x] Acción registrada en auditoría
+
+**Estado:** ✅ Implementado en `admin_panel.py` → pestaña "REGISTRO"
 
 ---
 
-## HU-004: Registrar Aprendiz Manual (Admin)
+## HU-006: Importar Aprendices desde Excel
+
 **Como** administrador  
-**Quiero** crear estudiante nuevo manualmente sin Excel  
-**Para que** entre al sistema rápidamente
+**Quiero** cargar un archivo `.xlsx` con múltiples aprendices  
+**Para que** no tenga que ingresar manualmente cientos de registros
 
 **Criterios de aceptación:**
-- [ ] Form: documento, nombre_completo, correo, id_ficha
-- [ ] Validación: documento único, email formato
-- [ ] Botón guardar → "✓ Aprendiz creado"
-- [ ] Contraseña default: sena123 → força cambio al login
-- [ ] Botón limpiar vacia todos campos
+- [x] Selector de archivo `.xlsx` con columnas: documento, nombre, correo, id_ficha
+- [x] Preview de los datos antes de importar
+- [x] Confirmación: "✅ N aprendices importados"
+- [x] Validación de documentos duplicados
+- [x] Rollback si hay error crítico durante la importación
+- [x] Usa `pandas` y `openpyxl` para el procesamiento
+
+**Estado:** ✅ Implementado en `logica.py` → `importar_excel()` + `admin_panel.py`
 
 ---
 
-## HU-005: Importar Aprendices desde Excel (Admin)
+## HU-007: Gestión de Papelera (Admin)
+
 **Como** administrador  
-**Quiero** cargar múltiples estudiantes de Excel  
-**Para que** no ingrese manualmente 100+ registros
+**Quiero** mover aprendices a una papelera en lugar de eliminarlos directamente  
+**Para que** pueda recuperarlos si fue un error, manteniendo el historial
 
 **Criterios de aceptación:**
-- [ ] Selector archivo: .xlsx con columnas [documento, nombre, correo, id_ficha]
-- [ ] Preview: muestra N registros a importar
-- [ ] Botón importar → "✓ 45 aprendices cargados"
-- [ ] Validar: documento duplicado, email formato
-- [ ] Rollback si hay error crítico
+- [x] Multiselección en tabla → botón "🗑️ MOVER A PAPELERA"
+- [x] Confirmación antes de mover
+- [x] Pestaña PAPELERA muestra aprendices desactivados
+- [x] Botón "♻️ RESTAURAR" devuelve el aprendiz al sistema activo
+- [x] Botón "❌ ELIMINAR PERMANENTE" borra definitivamente
+- [x] Todas las acciones registradas en auditoría
+
+**Estado:** ✅ Implementado en `admin_panel.py` → pestaña "PAPELERA" + `logica.py` → `mandar_a_papelera()` / `restaurar_aprendiz()`
 
 ---
 
-## HU-006: Mover Aprendiz a Papelera (Admin)
+## HU-008: Instructor Registra Faltas ⭐ v2.0
+
+**Como** instructor  
+**Quiero** registrar las faltas de los aprendices de mis fichas asignadas  
+**Para que** quede documentado el comportamiento de asistencia
+
+**Criterios de aceptación:**
+- [x] Instructor solo ve las fichas que tiene asignadas
+- [x] Puede seleccionar un aprendiz de su ficha
+- [x] Tres tipos de falta: **Inasistencia**, **Retardo**, **Justificada**
+- [x] Campo opcional de observaciones/comentarios
+- [x] La falta se guarda en tabla `faltas` con fecha, tipo y observación
+- [x] Confirmación visual tras guardar
+- [x] Acción registrada en auditoría
+
+**Estado:** ✅ Implementado en `admin_panel.py` → `PantallaInstructor` → pestaña "REGISTRO DE FALTAS"
+
+---
+
+## HU-009: Instructor Consulta Historial de Sus Fichas ⭐ v2.0
+
+**Como** instructor  
+**Quiero** consultar el historial de asistencias de los aprendices de mis fichas  
+**Para que** pueda hacer seguimiento sin necesidad del administrador
+
+**Criterios de aceptación:**
+- [x] Instructor ve solo sus fichas asignadas (no todas)
+- [x] Tabla con registros de asistencia (entrada/salida) por ficha
+- [x] Filtro por fecha para acotar resultados
+- [x] Vista de aprendices asignados a cada ficha
+
+**Estado:** ✅ Implementado en `admin_panel.py` → `PantallaInstructor` → pestaña "HISTORIAL"
+
+---
+
+## HU-010: Administrador Gestiona Instructores ⭐ v2.0
+
 **Como** administrador  
-**Quiero** desactivar aprendices sin borrar datos  
-**Para que** mantenga historial auditble
+**Quiero** crear instructores y asignarles fichas  
+**Para que** cada instructor tenga acceso solo a sus grupos
 
 **Criterios de aceptación:**
-- [ ] Multiselect en tabla → botón "🗑️ MOVER A PAPELERA"
-- [ ] Confirmación: "¿Desea mover 3 aprendices?"
-- [ ] Registra: auditoria (usuario, acción, fecha)
-- [ ] Tab PAPELERA muestra aprendices "borrados"
-- [ ] Botón "♻️ RESTAURAR" devuelve a estudantes
+- [x] Formulario para crear instructor: documento, nombre, correo
+- [x] Credenciales por defecto: `sena123` (cambio obligatorio al primer login)
+- [x] Asignación de una o más fichas al instructor
+- [x] Instructor solo ve y gestiona sus fichas asignadas
+- [x] Registro en tabla `instructores` y relación en `fichas_asignadas`
+
+**Estado:** ✅ Implementado en `admin_panel.py` → pestaña "GESTIÓN" + lógica de `logica.py`
 
 ---
 
-## HU-007: Cambiar Contraseña Obligatorio (Aprendiz)
-**Como** aprendiz nuevo  
-**Quiero** cambiar mi contraseña al primer login  
-**Para que** mi cuenta sea segura
+## HU-011: Administrador Genera Reportes de Asistencia
 
-**Criterios de aceptación:**
-- [ ] Modal popup al login (si cambio_pass = 0)
-- [ ] Validar: ≥8 caracteres, 1 mayúscula, 1 minúscula, 1 número
-- [ ] Indicador: ✓ verde cuando cumple todo
-- [ ] Guardar → actualiza BD, entra al panel
-- [ ] Atrás → cierra sesión
-
----
-
-## HU-008: Ver Auditoría de Acciones Admin (Admin)
 **Como** administrador  
-**Quiero** ver historial de quién hizo qué y cuándo  
-**Para que** audite cambios y detecte anomalías
+**Quiero** generar reportes visuales de asistencia por día, semana o mes  
+**Para que** pueda analizar patrones y tomar decisiones informadas
 
 **Criterios de aceptación:**
-- [ ] Tabla: usuario, acción, objeto, fecha, detalles
-- [ ] Filtros: por usuario, rango fechas
-- [ ] 100 últimas acciones visible
-- [ ] Exportar a CSV disponible
-- [ ] Acciones: login, logout, crear aprendiz, mover papelera, etc.
+- [x] Filtro por modo: Ficha o Aprendiz individual
+- [x] Filtro por rango: Día / Semana / Mes
+- [x] Gráfico de barras con métricas: Asistencias (A), Faltas (F), Retardos (R)
+- [x] Colores: verde (>80%), naranja (30-80%), rojo (<30%)
+- [x] Sesiones esperadas calculadas automáticamente con días hábiles
+- [x] Exportación a PDF y Excel
+- [x] Acción registrada en auditoría
+
+**Estado:** ✅ Implementado en `reportes.py` → `ReportesManager` + `logica.py` → `obtener_metricas_reporte_multiple()`
 
 ---
 
-## HU-009: Exportar Reporte a PDF (Admin)
+## HU-012: Administrador Consulta Dashboard de KPIs
+
 **Como** administrador  
-**Quiero** descargar reporte de asistencias en PDF  
-**Para que** lo envíe por correo o imprima
+**Quiero** ver un panel resumen con métricas de hoy, esta semana y este mes  
+**Para que** tenga una visión rápida del estado de asistencia
 
 **Criterios de aceptación:**
-- [ ] Botón "📥 DESCARGAR PDF" en reporte
-- [ ] PDF contiene: título, fecha, filtros, gráfico, tabla de detalles
-- [ ] Nombrado: reporte_asistencias_2026-03-02.pdf
-- [ ] Logo SENA en encabezado
+- [x] Ventana emergente con 3 columnas: HOY / SEMANA / MES
+- [x] Métricas: Asistencias, Faltas, Retardos por período
+- [x] Selector de fecha de referencia con calendario interactivo
+- [x] Colores adaptativos: verde si buena asistencia, rojo si baja
+- [x] Cálculo automático de semana laboral (lunes–viernes)
+
+**Estado:** ✅ Implementado en `dashboard_password.py` → `DashboardManager`
 
 ---
 
-## HU-010: Calcular Sesiones Esperadas Automáticamente (System)
-**Como** sistema  
-**Quiero** que se calculen sesiones esperadas automáticamente  
-**Para que** faltas y retardos sean precisos
+## HU-013: Exportar Reporte a PDF o Excel
+
+**Como** administrador  
+**Quiero** descargar el reporte generado en PDF o Excel  
+**Para que** pueda enviarlo o imprimirlo
 
 **Criterios de aceptación:**
-- [ ] Sesión = 6 horas (estándar)
-- [ ] Sesiones esperadas = SUM(horas_competencias_ficha) / 6
-- [ ] Solo cuenta días hábiles (lunes-viernes)
-- [ ] Limita hasta fecha_inicio + fecha_hoy
-- [ ] Retardo detectado por jornada: Mañana 08:15, Tarde 13:15
+- [x] Botón "📥 DESCARGAR" disponible tras generar reporte
+- [x] Selector de formato: `.pdf` o `.xlsx`
+- [x] PDF generado con `reportlab`: título, período, métricas por fila
+- [x] Excel generado con `pandas`: columnas Periodo, Esperado, Asistencias, Faltas, Retardos
+- [x] Dialogo nativo para elegir ubicación del archivo
+- [x] Confirmación: "Reporte guardado en [ruta]"
+
+**Estado:** ✅ Implementado en `main.py` → `exportar_reporte()`
 
 ---
 
-## Matriz de Trazabilidad (Módulo → HU)
+## HU-014: Administrador Consulta Auditoría del Sistema
 
-| Módulo | HU-001 | HU-002 | HU-003 | HU-004 | HU-005 | HU-006 | HU-007 | HU-008 | HU-009 | HU-010 |
-|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
-| Terminal Aprendices | ✓ | | | | | | | | | |
-| Panel Aprendiz | | ✓ | | | | | ✓ | | | |
-| Panel Admin - Gestión | | | | ✓ | ✓ | ✓ | | ✓ | | |
-| Panel Admin - Reportes | | | ✓ | | | | | | ✓ | ✓ |
-| Backend (logica.py) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+**Como** administrador  
+**Quiero** ver un registro de todas las acciones realizadas en el sistema  
+**Para que** pueda auditar cambios y detectar anomalías
 
+**Criterios de aceptación:**
+- [x] Tabla: usuario, acción, objeto, fecha, detalles
+- [x] Registra: login, logout, creación, modificación, eliminación, reportes
+- [x] Filtro por usuario y rango de fechas
+- [x] Visualización de las últimas 100+ acciones
+- [x] Cada acción registrada automáticamente desde cualquier módulo
+
+**Estado:** ✅ Implementado en `admin_panel.py` → pestaña "AUDITORÍA" + `conexion.py` → `registrar_auditoria()`
+
+---
+
+## Matriz de Trazabilidad
+
+| Módulo | HU-01 | HU-02 | HU-03 | HU-04 | HU-05 | HU-06 | HU-07 | HU-08 | HU-09 | HU-10 | HU-11 | HU-12 | HU-13 | HU-14 |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `main.py` | ✓ | | ✓ | ✓ | | | | | | | | | ✓ | |
+| `logica.py` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `admin_panel.py` | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | ✓ |
+| `dashboard_password.py` | | ✓ | ✓ | | | | | | | | | ✓ | | |
+| `reportes.py` | | | | | | | | | | | ✓ | | ✓ | |
+| `conexion.py` | ✓ | ✓ | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ |
+
+---
+
+*Última actualización: 5 de Marzo de 2026 — C.R.S v2.0*
