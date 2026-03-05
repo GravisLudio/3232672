@@ -354,6 +354,7 @@ CREATE TABLE IF NOT EXISTS `usuarios_admin` (
   `usuario` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `nombre` varchar(100) DEFAULT NULL,
+  `tipo_usuario` enum('admin','instructor') DEFAULT 'admin',
   PRIMARY KEY (`id_admin`),
   UNIQUE KEY `usuario` (`usuario`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -362,8 +363,72 @@ CREATE TABLE IF NOT EXISTS `usuarios_admin` (
 -- Volcado de datos para la tabla `usuarios_admin`
 --
 
-INSERT INTO `usuarios_admin` (`id_admin`, `usuario`, `password`, `nombre`) VALUES
-(1, 'admin', 'admin123', 'Administrador HSGS');
+INSERT INTO `usuarios_admin` (`id_admin`, `usuario`, `password`, `nombre`, `tipo_usuario`) VALUES
+(1, 'admin', 'admin123', 'Administrador HSGS', 'admin');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `instructores`
+--
+
+DROP TABLE IF EXISTS `instructores`;
+CREATE TABLE IF NOT EXISTS `instructores` (
+  `id_instructor` int NOT NULL AUTO_INCREMENT,
+  `documento` varchar(20) NOT NULL UNIQUE,
+  `nombre_completo` varchar(150) NOT NULL,
+  `correo` varchar(100) DEFAULT NULL,
+  `especialidad` varchar(150) DEFAULT NULL,
+  `usuario` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL DEFAULT 'sena123',
+  `cambio_pass` tinyint(1) DEFAULT '0',
+  `fecha_creacion` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_instructor`),
+  UNIQUE KEY `documento` (`documento`),
+  UNIQUE KEY `usuario` (`usuario`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `fichas_asignadas`
+--
+
+DROP TABLE IF EXISTS `fichas_asignadas`;
+CREATE TABLE IF NOT EXISTS `fichas_asignadas` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `id_instructor` int NOT NULL,
+  `id_ficha` int NOT NULL,
+  `fecha_asignacion` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_instructor_ficha` (`id_instructor`, `id_ficha`),
+  KEY `fk_ficha_asignada_instructor` (`id_instructor`),
+  KEY `fk_ficha_asignada_ficha` (`id_ficha`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `faltas`
+--
+
+DROP TABLE IF EXISTS `faltas`;
+CREATE TABLE IF NOT EXISTS `faltas` (
+  `id_falta` int NOT NULL AUTO_INCREMENT,
+  `documento_estudiante` varchar(20) NOT NULL,
+  `id_ficha` int NOT NULL,
+  `id_competencia` int NOT NULL,
+  `fecha_falta` date NOT NULL,
+  `tipo_falta` enum('Inasistencia','Retardo','Justificada') DEFAULT 'Inasistencia',
+  `razon` text,
+  `registrado_por` varchar(50) NOT NULL,
+  `fecha_registro` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_falta`),
+  KEY `fk_falta_estudiante` (`documento_estudiante`),
+  KEY `fk_falta_ficha` (`id_ficha`),
+  KEY `fk_falta_competencia` (`id_competencia`),
+  UNIQUE KEY `unique_falta_dia` (`documento_estudiante`, `fecha_falta`, `id_competencia`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Restricciones para tablas volcadas
@@ -388,6 +453,21 @@ ALTER TABLE `ficha_competencias`
 ALTER TABLE `horarios`
   ADD CONSTRAINT `horarios_ibfk_2` FOREIGN KEY (`id_competencia`) REFERENCES `competencias` (`id_competencia`) ON DELETE CASCADE,
   ADD CONSTRAINT `horarios_ibfk_3` FOREIGN KEY (`id_ficha`) REFERENCES `fichas` (`id_ficha`);
+
+--
+-- Filtros para la tabla `fichas_asignadas`
+--
+ALTER TABLE `fichas_asignadas`
+  ADD CONSTRAINT `fk_ficha_asignada_instructor` FOREIGN KEY (`id_instructor`) REFERENCES `instructores` (`id_instructor`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_ficha_asignada_ficha` FOREIGN KEY (`id_ficha`) REFERENCES `fichas` (`id_ficha`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `faltas`
+--
+ALTER TABLE `faltas`
+  ADD CONSTRAINT `fk_falta_estudiante` FOREIGN KEY (`documento_estudiante`) REFERENCES `estudiantes` (`documento`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_falta_ficha` FOREIGN KEY (`id_ficha`) REFERENCES `fichas` (`id_ficha`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_falta_competencia` FOREIGN KEY (`id_competencia`) REFERENCES `competencias` (`id_competencia`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

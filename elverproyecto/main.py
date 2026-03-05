@@ -8,6 +8,13 @@ import re
 import customtkinter as ctk 
 import logging
 from logging_config import configure_logging
+from PIL import Image, ImageTk
+import os
+from config import COLORES, FUENTES, DIMENSIONES, TEXTOS, CACHE
+from admin_panel import PantallaAdministrador
+from validadores import Validador
+from reportes import ReportesManager
+from dashboard_password import DashboardManager, PasswordManager, CalendarioPersonalizado
 
 # helper tooltip class for UI hints
 class ToolTip:
@@ -50,101 +57,82 @@ class SistemaHSGSCRS:
         self.root = root
         self.root.title("C.R.S - Chronos Registry System")
         
+        # Ruta base del script para recursos
+        self.ruta_base = os.path.dirname(os.path.abspath(__file__))
+        
         self.db = InventarioDB()
         if self.db.conexion:
             self.db.cursor = self.db.conexion.cursor(dictionary=True, buffered=True)
 
         self.servicio = AsistenciaService(self.db)
         self.admin_actual = None
-        self.aprendiz_actual = None 
-        self.sena_green = "#39A900"
-        self.sena_dark = "#2D5A27"
-        self.bg_light = "#FFFFFF"
+        self.aprendiz_actual = None
+        self.instructor_actual = None 
+        
+        # Instancia del gestor de reportes
+        self.reportes_manager = ReportesManager(self, self.db, self.servicio)
+        # Instancias de dashboard y password
+        self.dashboard_manager = DashboardManager(self, self.db, self.servicio)
+        self.password_manager = PasswordManager(self, self.db)
+        
+        # Usar colores desde config
+        self.sena_green = COLORES['SENA_GREEN']
+        self.sena_dark = COLORES['SENA_DARK']
+        self.bg_light = COLORES['BG_LIGHT']
+        self.sena_orange = COLORES['SENA_ORANGE']
+        
+        # CACHÉ para mejorar rendimiento
+        self._cache_fichas = None
+        self._cache_fichas_timestamp = 0
+        self._cache_aprendices = None
+        self._cache_aprendices_timestamp = 0
 
+        # Contenedor principal
         self.main_container = ctk.CTkFrame(self.root, fg_color=self.bg_light, corner_radius=0)
         self.main_container.pack(fill="both", expand=True)
+        
+        # Crear frames independientes (sin pack aún)
+        self.frames = {}
+        for nombre in ['intro', 'terminal', 'login', 'inicio', 'aprendiz', 'admin']:
+            self.frames[nombre] = ctk.CTkFrame(self.main_container, fg_color=self.bg_light, corner_radius=0)
+        
+        self.frames['intro'].configure(fg_color="transparent")  # La intro es transparente
+        self.current_frame = None
+        
+        # Construir todas las pantallas
+        self._construir_pantalla_intro()
+        self._construir_pantalla_inicio()
+        self._construir_pantalla_terminal()
+        self._construir_pantalla_login()
+        # aprendiz y admin se construyen dinámicamente (varían según el usuario)
 
         self.root.withdraw() 
         self.root.after(100, self.lanzar_sistema)
         
-
     def lanzar_sistema(self):
         self.root.deiconify() 
         self.root.state('zoomed')
-        # Forzar que siempre esté zoomed
-        self.root.bind('<Configure>', self._forzar_zoom)
-        # Deshabilitar minimizar
         self.root.resizable(False, False)
         self.animacion_entrada()
     
-    def _forzar_zoom(self, event=None):
-        """Fuerza que la ventana siempre esté maximizada"""
-        if self.root.state() != 'zoomed':
-            self.root.state('zoomed')
-        
-    def limpiar_pantalla(self):
-        for widget in self.main_container.winfo_children():
-            widget.destroy()
-
-    def animacion_entrada(self):
-        self.limpiar_pantalla()
-        self.f_intro = ctk.CTkFrame(self.main_container, fg_color="transparent")
+    # ===== MÉTODOS CONSTRUCTORES DE PANTALLAS =====
+    
+    def _construir_pantalla_intro(self):
+        """Construye la pantalla de intro con animación"""
+        frame = self.frames['intro']
+        self.f_intro = ctk.CTkFrame(frame, fg_color="transparent")
         self.f_intro.place(relx=0.5, rely=0.4, anchor="center")
         self.lbl_siglas = ctk.CTkLabel(self.f_intro, text="C.R.S", font=("Segoe UI", 10, "bold"), text_color="#D1D1D1")
         self.lbl_siglas.pack()
+        self.lbl_nombre = None  # Se creará dinámicamente
         self.size_actual = 10
-        self.root.after(20, lambda: self.animar_ciclo())
-
-    def animar_ciclo(self, paso=0):
-        total_pasos = 100
-        size_inicial = 10
-        target = 120
-
-        if paso <= total_pasos:
-            progreso = paso / total_pasos
-            factor = 1 - (1 - progreso) ** 3 
-            
-            self.size_actual = int(size_inicial + (target - size_inicial) * factor)
-        
-            color_inicio = (136, 136, 136)
-            color_fin = (57, 181, 74)
-            
-            r = int(color_inicio[0] + (color_fin[0] - color_inicio[0]) * progreso)
-            g = int(color_inicio[1] + (color_fin[1] - color_inicio[1]) * progreso)
-            b = int(color_inicio[2] + (color_fin[2] - color_inicio[2]) * progreso)
-            
-            color_hex = f'#{r:02x}{g:02x}{b:02x}'
-
-            self.lbl_siglas.configure(
-                text_color=color_hex,
-                font=("Segoe UI", self.size_actual, "bold")
-            )
-            
-            self.root.after(10, lambda: self.animar_ciclo(paso + 1))
-        
-        else:
-            self.lbl_nombre = ctk.CTkLabel(self.f_intro, text="CHRONOS REGISTRY SYSTEM", 
-                                        font=("Segoe UI", 1, "bold"), text_color="#555")
-            self.lbl_nombre.pack(pady=20)
-            self.efecto_pop(1)
-
-    def efecto_pop(self, size):
-        if size < 22:
-            diff = 22 - size
-            step = max(1, diff // 4)
-            size += step
-            self.lbl_nombre.configure(font=("Segoe UI", size, "bold"))
-            self.root.after(10, lambda: self.efecto_pop(size))
-        else:
-            self.root.after(2000, self.mostrar_terminal)
-
-
     
-    def mostrar_inicio(self):
-        self.limpiar_pantalla()
+    def _construir_pantalla_inicio(self):
+        """Construye la pantalla de inicio con botones"""
+        frame = self.frames['inicio']
         
         # Frame principal con gradiente visual
-        f_main = ctk.CTkFrame(self.main_container, fg_color=self.bg_light)
+        f_main = ctk.CTkFrame(frame, fg_color=self.bg_light)
         f_main.pack(fill="both", expand=True)
         
         # Header superior con título principal
@@ -178,30 +166,38 @@ class SistemaHSGSCRS:
         f_btns.pack(pady=20)
         
         # Botón Terminal (Registro de Asistencia)
-        btn_terminal = ctk.CTkButton(f_btns, text="📱 REGISTRO DE ASISTENCIA", height=65, width=450, 
+        btn_terminal = ctk.CTkButton(f_btns, text="REGISTRO DE ASISTENCIA", height=65, width=450, 
                                     font=("Segoe UI", 14, "bold"), fg_color=self.sena_green, 
                                     hover_color=self.sena_dark, command=self.mostrar_terminal)
         btn_terminal.pack(pady=15)
         ToolTip(btn_terminal, "Registra tu entrada y salida")
         
         # Botón Login Unificado
-        btn_login = ctk.CTkButton(f_btns, text="🔐 LOGIN", height=65, width=450, 
+        btn_login = ctk.CTkButton(f_btns, text="LOGIN", height=65, width=450, 
                                  font=("Segoe UI", 14, "bold"), fg_color="#333", 
                                  hover_color="#111", command=self.mostrar_login_unificado)
         btn_login.pack(pady=15)
         ToolTip(btn_login, "Acceso al panel de administración o tu perfil")
-
-    def mostrar_terminal(self):
-        self.limpiar_pantalla()
+        
+        # Botón Salir
+        btn_salir = ctk.CTkButton(f_btns, text="SALIR", height=65, width=450, 
+                                 font=("Segoe UI", 14, "bold"), fg_color="#E74C3C", 
+                                 hover_color="#C0392B", command=self.root.quit)
+        btn_salir.pack(pady=15)
+        ToolTip(btn_salir, "Cerrar la aplicación")
+    
+    def _construir_pantalla_terminal(self):
+        """Construye la pantalla de registro de asistencia"""
+        frame = self.frames['terminal']
         
         # Header superior
-        head = ctk.CTkFrame(self.main_container, height=70, corner_radius=0, fg_color=self.sena_green)
+        head = ctk.CTkFrame(frame, height=70, corner_radius=0, fg_color=self.sena_green)
         head.pack(fill="x")
-        ctk.CTkButton(head, text="⬅ VOLVER", width=140, fg_color=self.sena_dark, 
+        ctk.CTkButton(head, text="INICIO", width=140, fg_color=self.sena_dark, 
                      command=self.mostrar_inicio).pack(side="left", padx=25, pady=15)
         
         # Body principal
-        body = ctk.CTkFrame(self.main_container, fg_color=self.bg_light)
+        body = ctk.CTkFrame(frame, fg_color=self.bg_light)
         body.pack(fill="both", expand=True)
         
         # Frame central para el contenido
@@ -217,49 +213,38 @@ class SistemaHSGSCRS:
         f_title = ctk.CTkFrame(f, fg_color=self.sena_green, corner_radius=20)
         f_title.pack(fill="x", pady=20, padx=20)
         
-        ctk.CTkLabel(f_title, text="⏱️ REGISTRO DE ASISTENCIA", font=("Segoe UI", 26, "bold"), 
+        ctk.CTkLabel(f_title, text="REGISTRO DE ASISTENCIA", font=("Segoe UI", 26, "bold"), 
                     text_color="white").pack(pady=20)
         ctk.CTkLabel(f_title, text="Chronos Registry System", font=("Segoe UI", 11), 
                     text_color="#E8F5E9").pack(pady=(0, 15))
         
         # Entrada de documento
-        ent_doc = ctk.CTkEntry(f, font=("Segoe UI", 32), width=550, height=85, 
+        self.ent_doc_terminal = ctk.CTkEntry(f, font=("Segoe UI", 32), width=550, height=85, 
                               placeholder_text="N° Documento", justify="center", 
                               border_width=2, border_color=self.sena_green)
-        ent_doc.pack(pady=35, padx=30)
-        ent_doc.focus()
+        self.ent_doc_terminal.pack(pady=35, padx=30)
         
         # Botones de acción
         f_btns = ctk.CTkFrame(f, fg_color="transparent")
         f_btns.pack(pady=30)
         
-        def procesar(tipo):
-            exito, msg = self.servicio.registrar_entrada(ent_doc.get()) if tipo=="in" else self.servicio.registrar_salida(ent_doc.get())
-            if exito: 
-                messagebox.showinfo("✅ C.R.S", msg)
-                ent_doc.delete(0, tk.END)
-                ent_doc.focus()
-            else: 
-                messagebox.showwarning("⚠️ Atención", msg)
-                ent_doc.delete(0, tk.END)
-                ent_doc.focus()
-        
-        ctk.CTkButton(f_btns, text="📥 MARCAR ENTRADA", font=("Segoe UI", 15, "bold"), 
+        ctk.CTkButton(f_btns, text="MARCAR ENTRADA", font=("Segoe UI", 15, "bold"), 
                      height=70, width=500, fg_color=self.sena_green, 
-                     hover_color=self.sena_dark, command=lambda:procesar("in")).pack(pady=12, padx=20)
+                     hover_color=self.sena_dark, command=lambda:self._procesar_asistencia("in")).pack(pady=12, padx=20)
         
-        ctk.CTkButton(f_btns, text="📤 MARCAR SALIDA", font=("Segoe UI", 15, "bold"), 
+        ctk.CTkButton(f_btns, text="MARCAR SALIDA", font=("Segoe UI", 15, "bold"), 
                      height=70, width=500, fg_color="#E67E22", 
-                     hover_color="#D35400", command=lambda:procesar("out")).pack(pady=12, padx=20)
+                     hover_color="#D35400", command=lambda:self._procesar_asistencia("out")).pack(pady=12, padx=20)
         
-        # Footer con logo SENA - integrado con background
+        # Footer con logo SENA
         f_footer = ctk.CTkFrame(body, fg_color=self.bg_light, height=80)
         f_footer.pack(fill="x", side="bottom")
         
         try:
-            sena_logo = tk.PhotoImage(file="c:\\Users\\Jhoan Diaz\\Documents\\GitHub\\3232672\\elverproyecto\\images\\logosena.png")
-            # Redimensionar logo
-            sena_logo = sena_logo.subsample(3, 3)
+            ruta_logo = os.path.join(self.ruta_base, "images", "logosena.png")
+            sena_logo_pil = Image.open(ruta_logo)
+            sena_logo_pil = sena_logo_pil.resize((80, 80), Image.Resampling.LANCZOS)
+            sena_logo = ImageTk.PhotoImage(sena_logo_pil)
             lbl_logo = tk.Label(f_footer, image=sena_logo, bg=self.bg_light)
             lbl_logo.image = sena_logo
             lbl_logo.pack(side="right", padx=20, pady=10)
@@ -267,96 +252,258 @@ class SistemaHSGSCRS:
             logging.warning(f"No se pudo cargar logo SENA: {e}")
             ctk.CTkLabel(f_footer, text="SENA", font=("Segoe UI", 12, "bold"), 
                         text_color=self.sena_green).pack(side="right", padx=20)
+    
+    def _procesar_asistencia(self, tipo):
+        """Procesa entrada o salida de asistencia"""
+        exito, msg = self.servicio.registrar_entrada(self.ent_doc_terminal.get()) if tipo=="in" else self.servicio.registrar_salida(self.ent_doc_terminal.get())
+        if exito: 
+            messagebox.showinfo("C.R.S", msg)
+            self.ent_doc_terminal.delete(0, tk.END)
+            self.ent_doc_terminal.focus()
+        else: 
+            messagebox.showwarning("Atención", msg)
+            self.ent_doc_terminal.delete(0, tk.END)
+            self.ent_doc_terminal.focus()
+    
+    def _construir_pantalla_login(self):
+        """Construye pantalla de login con diseño moderno dos columnas"""
+        frame = self.frames['login']
+        
+        # Contenedor central
+        f_main = ctk.CTkFrame(frame, fg_color="transparent")
+        f_main.pack(fill="both", expand=True, padx=40, pady=40)
+        
+        # Frame principal con dos columnas
+        f_login = ctk.CTkFrame(f_main, fg_color="white", corner_radius=20)
+        f_login.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # ===== COLUMNA IZQUIERDA (Decorativa) - SENA ORANGE =====
+        f_left = ctk.CTkFrame(f_login, fg_color=self.sena_orange, corner_radius=20)
+        f_left.pack(side="left", fill="both", expand=True, padx=0, pady=0)
+        
+        # Logo SENA
+        f_icon = ctk.CTkFrame(f_left, fg_color="transparent")
+        f_icon.pack(pady=(60, 40))
+        
+        try:
+            ruta_logo = os.path.join(self.ruta_base, "images", "logosena.png")
+            logo_pil = Image.open(ruta_logo)
+            logo_pil = logo_pil.resize((140, 140), Image.Resampling.LANCZOS)
+            logo_tk = ImageTk.PhotoImage(logo_pil)
+            lbl_logo = tk.Label(f_icon, image=logo_tk, bg=self.sena_orange)
+            lbl_logo.image = logo_tk
+            lbl_logo.pack()
+        except Exception as e:
+            logging.warning(f"No se pudo cargar logo: {e}")
+            ctk.CTkLabel(f_icon, text="SENA", font=("Segoe UI", 24, "bold"),
+                        text_color="white").pack()
+        
+        # Texto
+        ctk.CTkLabel(f_left, text="Login", font=("Segoe UI", 48, "bold"),
+                    text_color="white").pack(padx=20)
+        
+        ctk.CTkLabel(f_left, 
+                    text="Chronos Registry System\nC.R.S", 
+                    font=("Segoe UI", 11),
+                    text_color="#F0F0F0", justify="center").pack(pady=(30, 0))
+        
+        # ===== COLUMNA DERECHA (Formulario) =====
+        f_right = ctk.CTkFrame(f_login, fg_color="white", corner_radius=0)
+        f_right.pack(side="right", fill="both", expand=True, padx=40, pady=40)
+        
+        # Título
+        ctk.CTkLabel(f_right, text="Inicio de sesión", 
+                    font=("Segoe UI", 28, "bold"),
+                    text_color=self.sena_dark).pack(anchor="w", pady=(0, 5))
+        
+        # Subtítulo
+        ctk.CTkLabel(f_right, text="Inicia sesión con tu cuenta para continuar",
+                    font=("Segoe UI", 11),
+                    text_color="#888888").pack(anchor="w", pady=(0, 30))
+        
+        # Usuario
+        ctk.CTkLabel(f_right, text="Usuario", font=("Segoe UI", 12, "bold"),
+                    text_color=self.sena_orange).pack(anchor="w")
+        self.ent_usuario = ctk.CTkEntry(f_right, placeholder_text="tu usuario",
+                                       height=45, border_width=2,
+                                       border_color=self.sena_orange,
+                                       placeholder_text_color=self.sena_orange,
+                                       fg_color="#F5F5F5")
+        self.ent_usuario.pack(fill="x", pady=(5, 20))
+        
+        # Contraseña
+        ctk.CTkLabel(f_right, text="Contraseña", font=("Segoe UI", 12, "bold"),
+                    text_color=self.sena_orange).pack(anchor="w")
+        self.ent_pass = ctk.CTkEntry(f_right, placeholder_text="Introduce tu contraseña",
+                                    height=45, border_width=2,
+                                    border_color=self.sena_orange, show="•",
+                                    placeholder_text_color=self.sena_orange,
+                                    fg_color=self.bg_light)
+        self.ent_pass.pack(fill="x", pady=(5, 30))
+        
+        # Botón Entrar
+        ctk.CTkButton(f_right, text="INICIAR SESIÓN", height=50,
+                     font=("Segoe UI", 14, "bold"),
+                     fg_color=self.sena_orange,
+                     hover_color="#C25A0D",
+                     text_color="white",
+                     command=self._procesar_login).pack(fill="x", pady=(0, 15))
+        
+        # Botón Volver
+        ctk.CTkButton(f_right, text="← Volver al Inicio", height=40,
+                     font=("Segoe UI", 11),
+                     fg_color="#E8E8E8",
+                     text_color=self.sena_dark,
+                     hover_color="#D0D0D0",
+                     command=self.mostrar_inicio).pack(fill="x")
+    
+    def _procesar_login(self):
+        """Procesa el login unificado (Admin, Instructor o Aprendiz)"""
+        usuario = self.ent_usuario.get().strip()
+        password = self.ent_pass.get()
+        
+        if not usuario or not password:
+            messagebox.showwarning("Validación", "Usuario y contraseña son requeridos")
+            return
+        
+        # Intentar como ADMINISTRADOR/INSTRUCTOR en usuarios_admin
+        self.db.cursor.execute("SELECT * FROM usuarios_admin WHERE usuario=%s AND password=%s", 
+                              (usuario, password))
+        admin = self.db.cursor.fetchone()
+        
+        if admin:
+            tipo_usuario = admin.get('tipo_usuario', 'admin')
+            self.admin_actual = usuario
+            try:
+                self.db.registrar_auditoria(self.admin_actual, f"login {tipo_usuario}")
+            except Exception as ex:
+                logging.error(f"Error registrando auditoría (login {tipo_usuario})", exc_info=True)
+            
+            if tipo_usuario == 'instructor':
+                self.mostrar_panel_instructor(admin)
+            else:
+                self.mostrar_panel_admin_ui()
+            return
+        
+        # Intentar como INSTRUCTOR en tabla instructores
+        instructor = self.servicio.login_instructor(usuario, password)
+        
+        if instructor:
+            self.instructor_actual = usuario
+            try:
+                self.db.registrar_auditoria(self.instructor_actual, "login instructor")
+            except Exception as ex:
+                logging.error("Error registrando auditoría (login instructor)", exc_info=True)
+            
+            if instructor.get('cambio_pass') == 0 or password == 'sena123':
+                self.actualizar_password_instructor_ventana(instructor['documento'])
+            self.mostrar_panel_instructor_ui(instructor)
+            return
+        
+        # Intentar como APRENDIZ
+        aprendiz = self.servicio.login_aprendiz(usuario, password)
+        
+        if aprendiz:
+            self.aprendiz_actual = usuario
+            if not self.db.registrar_auditoria(self.aprendiz_actual, "login aprendiz"):
+                logging.warning("Advertencia: No se pudo registrar la auditoría de login.")
+            if aprendiz.get('cambio_pass') == 0 or password == 'sena123': 
+                self.actualizar_password_ventana(aprendiz['documento'])
+            self.mostrar_panel_aprendiz(aprendiz)
+            return
+        
+        # Si llegamos aquí, credenciales inválidas
+        messagebox.showerror("Error", "Credenciales incorrectas")
+        self.ent_pass.delete(0, tk.END)
+        self.ent_usuario.focus()
+    
+    def show_frame(self, nombre_frame):
+        """Muestra un frame y oculta los demás (instantáneo)"""
+        for frame in self.frames.values():
+            frame.pack_forget()
+        if nombre_frame in self.frames:
+            self.frames[nombre_frame].pack(fill="both", expand=True)
+            self.current_frame = nombre_frame
+        self.root.update_idletasks()
+    
+    def limpiar_pantalla(self):
+        """Mantener por compatibilidad - ya no hace nada"""
+        pass
+    
+    def animacion_entrada(self):
+        """Inicia la pantalla de intro con animación"""
+        self.show_frame('intro')
+        self.root.after(20, lambda: self.animar_ciclo())
+
+    def animar_ciclo(self, paso=0):
+        total_pasos = 100
+        size_inicial = 10
+        target = 120
+
+        if paso <= total_pasos:
+            progreso = paso / total_pasos
+            factor = 1 - (1 - progreso) ** 3 
+            
+            self.size_actual = int(size_inicial + (target - size_inicial) * factor)
+        
+            color_inicio = (136, 136, 136)
+            color_fin = (57, 181, 74)
+            
+            r = int(color_inicio[0] + (color_fin[0] - color_inicio[0]) * progreso)
+            g = int(color_inicio[1] + (color_fin[1] - color_inicio[1]) * progreso)
+            b = int(color_inicio[2] + (color_fin[2] - color_inicio[2]) * progreso)
+            
+            color_hex = f'#{r:02x}{g:02x}{b:02x}'
+
+            self.lbl_siglas.configure(
+                text_color=color_hex,
+                font=("Segoe UI", self.size_actual, "bold")
+            )
+            
+            self.root.after(10, lambda: self.animar_ciclo(paso + 1))
+        
+        else:
+            # Crear el label del nombre cuando termina la animación del C.R.S
+            self.lbl_nombre = ctk.CTkLabel(self.f_intro, text="CHRONOS REGISTRY SYSTEM", 
+                                        font=("Segoe UI", 3, "bold"), text_color=self.sena_green)
+            self.lbl_nombre.pack(pady=20)
+            self.root.update()  # Forzar actualización visual
+            self.efecto_pop(3)
+
+    def efecto_pop(self, size):
+        if size < 26:
+            self.lbl_nombre.configure(font=("Segoe UI", size, "bold"), text_color=self.sena_orange)
+            size += 2
+            self.root.after(20, lambda: self.efecto_pop(size))
+        else:
+            self.root.after(2000, self.mostrar_terminal)
+
+
+    
+    def mostrar_inicio(self):
+        """Muestra la pantalla de inicio"""
+        self.show_frame('inicio')
+
+    def mostrar_terminal(self):
+        """Muestra la pantalla de registro de asistencia"""
+        self.show_frame('terminal')
+        self.ent_doc_terminal.focus()
+        self.ent_doc_terminal.delete(0, tk.END)
 
     def mostrar_login_unificado(self):
-        """Pantalla unificada de login que detecta automáticamente si es Admin o Aprendiz"""
-        self.limpiar_pantalla()
-        
-        f = ctk.CTkFrame(self.main_container, width=500, height=580, corner_radius=25,
-                         fg_color=self.bg_light, border_width=2, border_color="#333")
-        f.place(relx=0.5, rely=0.5, anchor="center")
-        
-        # Header
-        f_header = ctk.CTkFrame(f, fg_color="#333", corner_radius=20)
-        f_header.pack(fill="x", padx=15, pady=15)
-        
-        ctk.CTkLabel(f_header, text="🔐 ACCESO", font=("Segoe UI", 22, "bold"), 
-                    text_color="white").pack(pady=20)
-        
-        ctk.CTkLabel(f, text="Administrador o Aprendiz", font=("Segoe UI", 11), 
-                    text_color="#888").pack(pady=(20, 30))
-        
-        # Campos de entrada
-        usuario_ent = ctk.CTkEntry(f, width=380, height=55, placeholder_text="Usuario / Documento", 
-                                   font=("Segoe UI", 13), border_width=2, border_color="#333")
-        usuario_ent.pack(pady=15, padx=30)
-        
-        password_ent = ctk.CTkEntry(f, width=380, height=55, placeholder_text="Contraseña", 
-                                    show="*", font=("Segoe UI", 13), border_width=2, border_color="#333")
-        password_ent.pack(pady=15, padx=30)
-        
-        # Label para mostrar estado
-        lbl_estado = ctk.CTkLabel(f, text="", font=("Segoe UI", 10), text_color="#E74C3C")
-        lbl_estado.pack(pady=10)
-        
-        def intentar_login():
-            usuario = usuario_ent.get().strip()
-            password = password_ent.get()
-            
-            if not usuario or not password:
-                lbl_estado.configure(text="⚠️ Completa todos los campos")
-                return
-            
-            lbl_estado.configure(text="Verificando...")
-            self.root.update()
-            
-            # Intentar como ADMINISTRADOR primero
-            self.db.cursor.execute("SELECT * FROM usuarios_admin WHERE usuario=%s AND password=%s", 
-                                  (usuario, password))
-            admin = self.db.cursor.fetchone()
-            
-            if admin:
-                self.admin_actual = usuario
-                try:
-                    self.db.registrar_auditoria(self.admin_actual, "login admin")
-                except Exception as ex:
-                    logging.error("Error registrando auditoría (login admin)", exc_info=True)
-                self.mostrar_panel_admin_ui()
-                return
-            
-            # Intentar como APRENDIZ
-            aprendiz = self.servicio.login_aprendiz(usuario, password)
-            
-            if aprendiz:
-                self.aprendiz_actual = usuario
-                if not self.db.registrar_auditoria(self.aprendiz_actual, "login aprendiz"):
-                    logging.warning("Advertencia: No se pudo registrar la auditoría de login.")
-                if aprendiz.get('cambio_pass') == 0 or password == 'sena123': 
-                    self.actualizar_password_ventana(aprendiz['documento'])
-                self.mostrar_panel_aprendiz(aprendiz)
-                return
-            
-            # Si llegamos aquí, credenciales inválidas
-            lbl_estado.configure(text="❌ Credenciales incorrectas")
-            password_ent.delete(0, tk.END)
-            usuario_ent.focus()
-        
-        def try_login_enter(event=None):
-            if usuario_ent.get() and password_ent.get():
-                intentar_login()
-        
-        usuario_ent.bind("<Return>", try_login_enter)
-        password_ent.bind("<Return>", try_login_enter)
-        
-        ctk.CTkButton(f, text="INGRESAR", width=380, height=60, font=("Segoe UI", 14, "bold"),
-                     fg_color="#333", hover_color="#111", command=intentar_login).pack(pady=25, padx=30)
-        
-        ctk.CTkButton(f, text="VOLVER", fg_color="transparent", text_color="gray", 
-                     border_width=1, border_color="gray", command=self.mostrar_inicio).pack(padx=30)
+        """Muestra la pantalla de login unificada"""
+        self.show_frame('login')
+        self.ent_usuario.delete(0, tk.END)
+        self.ent_pass.delete(0, tk.END)
+        self.ent_usuario.focus()
+
 
     def mostrar_panel_aprendiz(self, user):
+        self.show_frame('aprendiz')
         self.limpiar_pantalla()
-        head = ctk.CTkFrame(self.main_container, height=75, corner_radius=0, fg_color=self.bg_light, border_width=1, border_color="#EEE"); head.pack(fill="x")
+        # header colorido para aprendiz
+        head = ctk.CTkFrame(self.frames['aprendiz'], height=75, corner_radius=0, fg_color=self.sena_orange, border_width=0)
+        head.pack(fill="x")
         def cerrar_aprendiz():
             if self.aprendiz_actual:
                 try:
@@ -365,217 +512,89 @@ class SistemaHSGSCRS:
                     logging.error("Error registrando auditoría (logout aprendiz)", exc_info=True)
             self.aprendiz_actual = None
             self.mostrar_inicio()
-        ctk.CTkButton(head, text="🚪 CERRAR SESIÓN", fg_color="#FF5252", hover_color="#D32F2F", command=cerrar_aprendiz).pack(side="left", padx=25)
-        ctk.CTkLabel(head, text=f"Aprendiz: {user['nombre_completo']}", font=("Segoe UI", 15, "bold")).pack(side="right", padx=35)
+        ctk.CTkButton(head, text="CERRAR SESIÓN", fg_color="#FF5252", hover_color="#D32F2F", text_color="white", font=("Segoe UI", 11, "bold"), command=cerrar_aprendiz).pack(side="left", padx=25)
+        ctk.CTkLabel(head, text=f"Aprendiz: {user['nombre_completo']}", font=("Segoe UI", 15, "bold"), text_color="white").pack(side="right", padx=35)
 
-        body = ctk.CTkFrame(self.main_container, fg_color="transparent"); body.pack(fill="both", expand=True, padx=45, pady=25)
-        left = ctk.CTkFrame(body, corner_radius=20, fg_color=self.bg_light, border_width=1, border_color="#DDD"); left.place(relx=0, rely=0, relwidth=0.64, relheight=1)
-        cal = Calendar(left, selectmode='day', locale='es_ES', background=self.sena_green, headersbackground=self.sena_dark); cal.pack(fill="both", expand=True, padx=25, pady=25)
-        right = ctk.CTkFrame(body, corner_radius=20, fg_color=self.bg_light, border_width=1, border_color="#DDD"); right.place(relx=0.66, rely=0, relwidth=0.34, relheight=1)
-        lbl_info = ctk.CTkLabel(right, text="Actividad del día", font=("Segoe UI", 18, "bold")); lbl_info.pack(pady=20)
+        body = ctk.CTkFrame(self.frames['aprendiz'], fg_color="transparent")
+        body.pack(fill="both", expand=True, padx=45, pady=25)
+
+        # panel izquierdo: calendario moderno
+        left = ctk.CTkFrame(body, corner_radius=20, fg_color=self.bg_light, border_width=1, border_color="#DDD")
+        # reducir ancho relativo para que calendario quede más compacto
+        left.place(relx=0, rely=0, relwidth=0.55, relheight=1)
+        self.cal = CalendarioPersonalizado(left, self.sena_green, self.bg_light)
+        # Hacer que ocupe todo el frame disponible
+        self.cal.pack(fill="both", expand=True, padx=15, pady=15)
+
+        # panel derecho: actividad del día
+        right = ctk.CTkFrame(body, corner_radius=20, fg_color=self.bg_light, border_width=1, border_color="#DDD")
+        right.place(relx=0.66, rely=0, relwidth=0.34, relheight=1)
+        ctk.CTkLabel(right, text="Actividad del día", font=("Segoe UI", 18, "bold"), text_color=self.sena_dark).pack(pady=20)
         
-        container_cards = ctk.CTkScrollableFrame(right, fg_color="transparent"); container_cards.pack(fill="both", expand=True, padx=12, pady=8)
+        container_cards = ctk.CTkScrollableFrame(right, fg_color="transparent")
+        container_cards.pack(fill="both", expand=True, padx=12, pady=8)
 
         def actualizar_cards(e=None):
-            for w in container_cards.winfo_children(): w.destroy()
-            fecha = cal.selection_get()
-            regs = self.servicio.obtener_registros_dia(user['documento'], fecha)
-            if not regs: ctk.CTkLabel(container_cards, text="Sin actividad este día", text_color="#AAA").pack(pady=60)
-            else:
-                for r in regs:
-                    card = ctk.CTkFrame(container_cards, fg_color="#F8F9FA", corner_radius=12, border_width=1, border_color="#EEE"); card.pack(fill="x", pady=6, padx=8)
-                    ctk.CTkLabel(card, text=f"📥 Ent: {r['fecha_registro'].strftime('%H:%M')}", font=("Segoe UI", 11)).pack(side="left", padx=15, pady=12)
-                    if r['fecha_salida']: ctk.CTkLabel(card, text=f"📤 Sal: {r['fecha_salida'].strftime('%H:%M')}", font=("Segoe UI", 11), text_color="#E67E22").pack(side="right", padx=15)
-        cal.bind("<<CalendarSelected>>", actualizar_cards); actualizar_cards()
+            try:
+                for w in container_cards.winfo_children():
+                    w.destroy()
+                fecha = self.cal.selection_get()
+                regs = self.servicio.obtener_registros_dia(user['documento'], fecha)
+                if not regs:
+                    ctk.CTkLabel(container_cards, text="Sin actividad este día", text_color="#AAA").pack(pady=60)
+                else:
+                    for r in regs:
+                        card = ctk.CTkFrame(container_cards, fg_color="#F8F9FA", corner_radius=12, border_width=1, border_color="#EEE")
+                        card.pack(fill="x", pady=6, padx=8)
+                        ctk.CTkLabel(card, text=f"Entrada: {r['fecha_registro'].strftime('%H:%M')}", font=("Segoe UI", 11)).pack(side="left", padx=15, pady=12)
+                        if r['fecha_salida']:
+                            ctk.CTkLabel(card, text=f"Salida: {r['fecha_salida'].strftime('%H:%M')}", font=("Segoe UI", 11), text_color="#E67E22").pack(side="right", padx=15)
+                
+                # Obtener todos los registros del mes para mostrar en calendario
+                fecha_inicio = fecha.replace(day=1)
+                # Calcular último día del mes
+                if fecha.month == 12:
+                    fecha_fin = fecha.replace(year=fecha.year + 1, month=1, day=1) - __import__('datetime').timedelta(days=1)
+                else:
+                    fecha_fin = fecha.replace(month=fecha.month + 1, day=1) - __import__('datetime').timedelta(days=1)
+                
+                registros_mes = self.servicio.obtener_registros_mes(user['documento'], fecha_inicio, fecha_fin)
+                
+                # Agrupar registros por día
+                registros_por_dia = {}
+                for r in registros_mes:
+                    if r.get('fecha_registro'):
+                        fecha_reg = r['fecha_registro'].date() if hasattr(r['fecha_registro'], 'date') else r['fecha_registro']
+                        if fecha_reg not in registros_por_dia:
+                            registros_por_dia[fecha_reg] = []
+                        
+                        horarios = {}
+                        if hasattr(r['fecha_registro'], 'strftime'):
+                            horarios['entrada'] = r['fecha_registro'].strftime('%H:%M')
+                        if r.get('fecha_salida') and hasattr(r['fecha_salida'], 'strftime'):
+                            horarios['salida'] = r['fecha_salida'].strftime('%H:%M')
+                        
+                        registros_por_dia[fecha_reg].append(horarios)
+                
+                self.cal.establecer_registros_mes(registros_por_dia)
+            except Exception as ex:
+                logging.error(f"Error en actualizar_cards: {ex}", exc_info=True)
+                ctk.CTkLabel(container_cards, text=f"Error: {str(ex)[:50]}", text_color="red").pack(pady=60)
+        
+        self.cal.bind("<<CalendarSelected>>", actualizar_cards)
+        actualizar_cards()
 
 
     def mostrar_panel_admin_ui(self):
+        """Muestra el panel de administrador usando PantallaAdministrador"""
+        self.show_frame('admin')
         self.limpiar_pantalla()
-        head = ctk.CTkFrame(self.main_container, height=75, corner_radius=0, fg_color=self.sena_dark); head.pack(fill="x")
-        def cerrar_admin():
-            if self.admin_actual:
-                try:
-                    self.db.registrar_auditoria(self.admin_actual, "logout admin")
-                except Exception as ex:
-                    logging.error("Error registrando auditoría (logout admin)", exc_info=True)
-            self.admin_actual = None
-            self.mostrar_inicio()
-        ctk.CTkButton(head, text="🔒 CERRAR", fg_color="#444", command=cerrar_admin).pack(side="right", padx=25)
-        # botón para dashboard rápido
-        btn_dash = ctk.CTkButton(head, text="📈 DASHBOARD", fg_color="#39A900", hover_color="#2D5A27", command=self.mostrar_dashboard)
-        btn_dash.pack(side="left", padx=25)
-        ToolTip(btn_dash, "Ver indicadores clave (KPIs)")
-        tabview = ctk.CTkTabview(self.main_container, segmented_button_selected_color=self.sena_green, fg_color=self.bg_light)
-        tabview.pack(fill="both", expand=True, padx=25, pady=15)
-        t_hist = tabview.add("🕒 HISTORIAL"); t_gest = tabview.add("👥 GESTIÓN"); t_reg = tabview.add("📝 REGISTRO"); t_pap = tabview.add("🗑️ PAPELERA"); t_rep = tabview.add("📊 REPORTES")
-        for t in (t_hist, t_gest, t_reg, t_pap, t_rep):
-            t.configure(fg_color=self.sena_dark, border_width=1, border_color="#DDD", corner_radius=20)
-
-        def refresh_hist():
-            for i in tv_hist.get_children(): tv_hist.delete(i)
-            self.db.cursor.execute("SELECT a.id_asistencia, a.documento_estudiante, e.nombre_completo, a.fecha_registro, a.fecha_salida FROM asistencias a JOIN estudiantes e ON a.documento_estudiante = e.documento ORDER BY a.fecha_registro DESC LIMIT 100")
-            for r in self.db.cursor.fetchall():
-                sal = r['fecha_salida'].strftime('%H:%M') if r['fecha_salida'] else "PENDIENTE"
-                tv_hist.insert("", "end", values=(r['documento_estudiante'], r['nombre_completo'], r['fecha_registro'].strftime('%d/%m %H:%M'), sal))
-        tv_f1 = tk.Frame(t_hist, bg="#f7f7f7", borderwidth=1, relief="solid"); tv_f1.pack(fill="both", expand=True, padx=12, pady=12)
-        tv_hist = ttk.Treeview(tv_f1, columns=("DOC", "NOMBRE", "IN", "OUT"), show="headings"); [tv_hist.heading(c, text=c) for c in ("DOC", "NOMBRE", "IN", "OUT")]; tv_hist.pack(fill="both", expand=True); refresh_hist()
-
-        f_bus = ctk.CTkFrame(t_gest, fg_color="transparent"); f_bus.pack(fill="x", padx=20, pady=15)
-        ent_bus = ctk.CTkEntry(f_bus, placeholder_text="Buscar aprendiz...", width=420); ent_bus.pack(side="left", padx=10)
-        tv_f2 = tk.Frame(t_gest, bg=self.bg_light); tv_f2.pack(fill="both", expand=True, padx=20)
-        tv_gest = ttk.Treeview(tv_f2, columns=("DOC", "NOMBRE", "FICHA"), show="headings", selectmode='extended'); [tv_gest.heading(c, text=c) for c in ("DOC", "NOMBRE", "FICHA")]; tv_gest.pack(fill="both", expand=True)
-        def filtrar():
-            for i in tv_gest.get_children(): tv_gest.delete(i)
-            v = f"%{ent_bus.get()}%"
-            self.db.cursor.execute("SELECT documento, nombre_completo, id_ficha FROM estudiantes WHERE documento LIKE %s OR nombre_completo LIKE %s", (v, v))
-            for r in self.db.cursor.fetchall(): tv_gest.insert("", "end", values=(r['documento'], r['nombre_completo'], r['id_ficha']))
-        ctk.CTkButton(f_bus, text="🔍 FILTRAR", width=120, command=filtrar).pack(side="left"); filtrar()
-        def mover_seleccion():
-            docs = [tv_gest.item(i)['values'][0] for i in tv_gest.selection()]
-            if not docs: return
-            if messagebox.askyesno("Confirmar", f"¿Desea mover {len(docs)} aprendices a la papelera?"):
-                for doc in docs:
-                    self.servicio.mandar_a_papelera(doc)
-                    try:
-                        self.db.registrar_auditoria(self.admin_actual, "mover a papelera", objeto=doc)
-                    except Exception as ex:
-                        logging.error(f"Error registrando auditoría mover a papelera para {doc}", exc_info=True)
-                filtrar(); refresh_pap()
-        ctk.CTkButton(t_gest, text="🗑️ MOVER A PAPELERA", fg_color="#E74C3C", command=mover_seleccion).pack(pady=10)
-
-        f_reg_m = ctk.CTkFrame(t_reg, corner_radius=20, fg_color=self.bg_light, border_width=1, border_color="#EEE"); f_reg_m.pack(pady=20, padx=50, fill="x")
-        grid_f = tk.Frame(f_reg_m, bg=self.bg_light); grid_f.pack(pady=20, padx=25)
-        fields = ["Documento", "Nombre Completo", "Correo"]; entries = {}
-        for i, l in enumerate(fields):
-            ctk.CTkLabel(grid_f, text=l, text_color="gray").grid(row=0, column=i, padx=12)
-            e = ctk.CTkEntry(grid_f, width=190); e.grid(row=1, column=i, padx=5, pady=5); entries[l] = e
-        cb_f = ttk.Combobox(grid_f, state="readonly", width=40); cb_f.grid(row=1, column=3, padx=12); cb_f['values'] = [f"{f['id_ficha']} | {f['nombre_programa']}" for f in self.servicio.obtener_fichas()]
-        def save():
-            exito, mensaje = self.servicio.guardar_aprendiz_manual(
-                {k: v.get() for k, v in entries.items()}, 
-                cb_f.get().split(" | ")[0] if cb_f.get() else None
-            )
-            if exito:
-                messagebox.showinfo("C.R.S", mensaje)
-                [v.delete(0, 'end') for v in entries.values()] 
-                filtrar() 
-            else:
-                
-                messagebox.showwarning("Atención", mensaje)
-        ctk.CTkButton(f_reg_m, text="💾 GUARDAR", command=save).pack(pady=15)
-        ctk.CTkButton(t_reg, text="📂 CARGA EXCEL", fg_color="#333", command=self.servicio.importar_excel).pack()
-        
-        def limpiar():
-            for e in entries.values(): e.delete(0, 'end')
-            cb_f.set('')
-        ctk.CTkButton(f_reg_m, text="🧹 LIMPIAR", fg_color="#555", command=limpiar).pack(pady=5)
-        tv_f3 = tk.Frame(t_pap, bg=self.bg_light); tv_f3.pack(fill="both", expand=True, padx=20, pady=12)
-        tv_pap = ttk.Treeview(tv_f3, columns=("DOC", "NOMBRE", "FICHA"), show="headings", selectmode='extended'); [tv_pap.heading(c, text=c) for c in ("DOC", "NOMBRE", "FICHA")]; tv_pap.pack(fill="both", expand=True)
-        
-        
-        def refresh_pap():
-            for i in tv_pap.get_children(): tv_pap.delete(i)
-            self.db.cursor.execute("SELECT documento, nombre_completo, id_ficha FROM estudiantes_eliminados")
-            for r in self.db.cursor.fetchall(): tv_pap.insert("", "end", values=(r['documento'], r['nombre_completo'], r['id_ficha']))
-        btn_p = ctk.CTkFrame(t_pap, fg_color="transparent"); btn_p.pack(pady=10)
-        def restaurar():
-            docs = [tv_pap.item(i)['values'][0] for i in tv_pap.selection()]
-            for d in docs: 
-                self.servicio.restaurar_aprendiz(d)
-                try:
-                    self.db.registrar_auditoria(self.admin_actual, "restaurar aprendiz", objeto=d)
-                except Exception as ex:
-                    logging.error(f"Error registrando auditoría restaurar aprendiz para {d}", exc_info=True)
-            refresh_pap(); filtrar()
-        def eliminar():
-            docs = [tv_pap.item(i)['values'][0] for i in tv_pap.selection()]
-            if messagebox.askyesno("Confirmar", "Esta acción es irreversible"):
-                for d in docs: 
-                    self.servicio.eliminar_permanente(d)
-                    try:
-                        self.db.registrar_auditoria(self.admin_actual, "eliminar permanente", objeto=d)
-                    except Exception as ex:
-                        logging.error(f"Error registrando auditoría eliminar permanente para {d}", exc_info=True)
-                refresh_pap()
-        ctk.CTkButton(btn_p, text="♻️ RESTAURAR", fg_color=self.sena_green, command=restaurar).pack(side="left", padx=10)
-        ctk.CTkButton(btn_p, text="🔥 ELIMINAR", fg_color="black", command=eliminar).pack(side="left", padx=10); refresh_pap()
-        
-        
-        # Inicializar la pestaña de reportes (se implementa en crear_pestana_reportes)
-        self.crear_pestana_reportes(t_rep)
-
-        
+        # Delegar construcción a clase especializada (extrae ~120 líneas)
+        PantallaAdministrador(self.frames['admin'], self.db, self.servicio, 
+                             self.admin_actual, self)
     def crear_pestana_reportes(self, t_rep):
-        # Contenedor principal de la pestaña
-        f_rep_m = ctk.CTkFrame(t_rep, corner_radius=20, fg_color="white", border_width=1, border_color="#EEE")
-        f_rep_m.pack(pady=20, padx=50, fill="x")
-        
-        grid_rep = tk.Frame(f_rep_m, bg="white")
-        grid_rep.pack(pady=20, padx=25)
-
-        # Variables de control para el nuevo sistema de selección
-        self.modo_filtro = tk.StringVar(value="Ficha")
-        self.items_seleccionados = [] 
-
-        # --- FILA 0: MODO ---
-        ctk.CTkLabel(grid_rep, text="Filtrar por:", text_color="gray").grid(row=0, column=0, sticky="w", padx=10)
-        radio_frame = tk.Frame(grid_rep, bg="white")
-        radio_frame.grid(row=1, column=0, padx=10, sticky="w")
-        
-        ctk.CTkRadioButton(radio_frame, text="Fichas", variable=self.modo_filtro, value="Ficha", 
-                           command=self.cambiar_modo_reporte).pack(side="left", padx=5)
-        ctk.CTkRadioButton(radio_frame, text="Aprendices", variable=self.modo_filtro, value="Aprendiz", 
-                           command=self.cambiar_modo_reporte).pack(side="left", padx=5)
-
-        # --- FILA 0, COL 1: COMBO DINÁMICO ---
-        ctk.CTkLabel(grid_rep, text="Seleccionar elemento", text_color="gray").grid(row=0, column=1, padx=12)
-        self.combo_seleccion = ttk.Combobox(grid_rep, state="normal", width=40)
-        self.combo_seleccion.grid(row=1, column=1, padx=5, pady=5)
-        
-        btn_add = ctk.CTkButton(grid_rep, text="Añadir +", width=80, command=self.agregar_item_reporte)
-        btn_add.grid(row=1, column=2, padx=5)
-
-        # --- FILA 2: LISTA DE SELECCIONADOS ---
-        self.lbl_lista_rep = ctk.CTkLabel(grid_rep, text="Seleccionados: Ninguno", text_color="black", font=("Arial", 11, "italic"))
-        self.lbl_lista_rep.grid(row=2, column=0, columnspan=2, sticky="w", padx=15, pady=5)
-        
-        ctk.CTkButton(grid_rep, text="Limpiar", width=60, fg_color="#E74C3C", command=self.limpiar_lista_reporte).grid(row=2, column=2, padx=5)
-
-        # --- RANGO DE TIEMPO ---
-        ctk.CTkLabel(grid_rep, text="Rango", text_color="gray").grid(row=0, column=3, padx=12)
-        self.seg_tiempo = ctk.CTkSegmentedButton(grid_rep, values=["Día", "Semana", "Mes"], command=self.mostrar_selector_rango)
-        self.seg_tiempo.set("Día")
-        self.seg_tiempo.grid(row=1, column=3, padx=12)
-
-        # Contenedor para el selector (calendario / semanas / meses)
-        self.selector_frame = tk.Frame(f_rep_m, bg="white")
-        self.selector_frame.pack(fill="x", padx=50)
-
-        # --- BOTÓN GENERAR y EXPORTAR ---
-        btn_frame = tk.Frame(t_rep, bg=self.sena_dark)
-        btn_frame.pack(pady=10)
-        btn_gen = ctk.CTkButton(btn_frame, text="📊 GENERAR ESTADÍSTICAS", font=("Arial", 14, "bold"),
-                      command=self.lanzar_reporte)
-        btn_gen.pack(side="left", padx=5)
-        ToolTip(btn_gen, "Generar gráfico según filtros")
-        self.btn_exp_rep = ctk.CTkButton(btn_frame, text="📥 EXPORTAR", font=("Arial", 14, "bold"),
-                      fg_color="#888", hover_color="#666", state="disabled", command=self.exportar_reporte)
-        self.btn_exp_rep.pack(side="left", padx=5)
-        ToolTip(self.btn_exp_rep, "Guardar reporte en PDF o Excel (primero genera un reporte)")
-
-        # --- EL CANVAS (Fuera del frame de filtros para que no se oculte) ---
-        self.canvas_rep = tk.Canvas(t_rep, bg="white", height=300, highlightthickness=1, highlightbackground="#DDD")
-        self.canvas_rep.pack(fill="both", expand=True, padx=50, pady=10)
-        
-        self.canvas_rep.create_text(300, 150, text="Seleccione filtros y presione Generar", fill="gray")
-
-        # Cargar datos iniciales
-        self.cambiar_modo_reporte()
-        # Mostrar el selector por defecto (Día)
-        self.mostrar_selector_rango()
-        # preparar almacenamiento de último reporte
-        self.last_report_items = []
-        self.last_report_params = None
+        """Delegar construcción de pestaña de reportes al gestor especializado"""
+        self.reportes_manager.crear_pestana_reportes(t_rep)
 
     def exportar_reporte(self):
         """Genera un archivo PDF o Excel con los datos del último reporte."""
@@ -642,401 +661,104 @@ class SistemaHSGSCRS:
             messagebox.showerror("Exportar", f"Error al generar PDF: {e}")
 
     def mostrar_dashboard(self):
-        """Ventana con KPIs en 3 columnas: Hoy, Semana, Mes.
-        
-        Detecta automáticamente:
-        - Hoy: solo la fecha seleccionada
-        - Semana: lunes a viernes (detecta la semana laboral que contiene la fecha)
-        - Mes: primer a último día del mes
-        """
-        v = tk.Toplevel(self.root)
-        v.title("Dashboard CRS")
-        v.geometry("1000x550")
-        v.config(bg=self.bg_light)
-
-        # contenedor principal
-        main_frame = tk.Frame(v, bg=self.bg_light)
-        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
-
-        # selector de fecha
-        lbl_sel = tk.Label(main_frame, text="Fecha de referencia:", font=("Segoe UI", 11), bg=self.bg_light)
-        lbl_sel.pack(pady=(0, 5))
-        cal = Calendar(main_frame, selectmode='day', locale='es_ES',
-                       background=self.sena_green, headersbackground=self.sena_dark)
-        cal.pack()
-
-        def actualizar_dashboard(e=None):
-            # borrar KPIs previos (mantener selector)
-            for w in main_frame.winfo_children():
-                if w not in (lbl_sel, cal):
-                    w.destroy()
-            try:
-                hoy = cal.selection_get()
-                
-                # Calcular rangos
-                # HOY: solo esa fecha
-                fecha_hoy = hoy
-                
-                # SEMANA: lunes a viernes de esa semana
-                dias_desde_lunes = hoy.weekday()  # 0=lunes, 4=viernes, 5=sábado, 6=domingo
-                lunes = hoy - datetime.timedelta(days=dias_desde_lunes)
-                viernes = lunes + datetime.timedelta(days=4)
-                
-                # MES: primer día a último día
-                mes_ini = hoy.replace(day=1)
-                import calendar as _cal
-                ultimo_dia = _cal.monthrange(hoy.year, hoy.month)[1]
-                mes_fin = hoy.replace(day=ultimo_dia)
-                
-                # Obtener datos
-                datos_dia = self.servicio.obtener_metricas_reporte_multiple([], "Ficha", "Día", fecha_hoy)
-                datos_sem = self.servicio.obtener_metricas_reporte_multiple([], "Ficha", "Semana", lunes)
-                datos_mes = self.servicio.obtener_metricas_reporte_multiple([], "Ficha", "Mes", mes_ini)
-
-                # Contenedor de columnas
-                cols_frame = tk.Frame(main_frame, bg=self.bg_light)
-                cols_frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-                # Helper para crear una columna
-                def crear_columna(parent, titulo, fecha_inicio, fecha_fin, datos, emoji):
-                    col = tk.Frame(parent, bg="white", relief="solid", borderwidth=2)
-                    col.pack(side="left", fill="both", expand=True, padx=5)
-                    
-                    # Encabezado
-                    header = tk.Frame(col, bg=self.sena_green)
-                    header.pack(fill="x")
-                    
-                    lbl_titulo = tk.Label(header, text=f"{emoji} {titulo}", 
-                                         font=("Segoe UI", 13, "bold"), 
-                                         bg=self.sena_green, fg="white")
-                    lbl_titulo.pack(pady=8)
-                    
-                    # Rango de fechas
-                    if fecha_inicio == fecha_fin:
-                        rango_txt = fecha_inicio.strftime("%d/%m/%Y")
-                    else:
-                        rango_txt = f"{fecha_inicio.strftime('%d/%m')} - {fecha_fin.strftime('%d/%m/%Y')}"
-                    
-                    lbl_rango = tk.Label(col, text=rango_txt, 
-                                        font=("Segoe UI", 10), 
-                                        bg="white", fg="#666")
-                    lbl_rango.pack(pady=5)
-                    
-                    # Separador
-                    sep = tk.Frame(col, bg="#E0E0E0", height=1)
-                    sep.pack(fill="x", padx=10)
-                    
-                    # Datos
-                    content = tk.Frame(col, bg="white")
-                    content.pack(fill="both", expand=True, padx=12, pady=12)
-                    
-                    def dato_linea(label, valor, color="black"):
-                        f = tk.Frame(content, bg="white")
-                        f.pack(fill="x", pady=6)
-                        
-                        lbl_l = tk.Label(f, text=label, font=("Segoe UI", 10), 
-                                        bg="white", fg="#555")
-                        lbl_l.pack(side="left")
-                        
-                        lbl_v = tk.Label(f, text=str(valor), font=("Segoe UI", 11, "bold"), 
-                                        bg="white", fg=color)
-                        lbl_v.pack(side="right")
-                    
-                    asist = datos.get('total_asistencias', 0)
-                    faltas = datos.get('faltas', 0)
-                    retardos = datos.get('retardos', 0)
-                    
-                    # Color según asistencia (rojo si poca, verde si buena)
-                    color_asist = "#39A900" if asist >= 10 else "#E74C3C"
-                    
-                    dato_linea("Asistencias:", asist, color_asist)
-                    dato_linea("Faltas:", faltas, "#FF9800" if faltas > 2 else "#555")
-                    dato_linea("Retardos:", retardos, "#E67E22" if retardos > 0 else "#555")
-                
-                # Crear 3 columnas
-                crear_columna(cols_frame, "HOY", fecha_hoy, fecha_hoy, datos_dia, "📅")
-                crear_columna(cols_frame, "SEMANA", lunes, viernes, datos_sem, "📊")
-                crear_columna(cols_frame, "MES", mes_ini, mes_fin, datos_mes, "📈")
-                
-                # Botón cerrar
-                btn_frame = tk.Frame(main_frame, bg=self.bg_light)
-                btn_frame.pack(pady=10)
-                ctk.CTkButton(btn_frame, text="Cerrar", command=v.destroy).pack()
-                
-            except Exception as ex:
-                tk.Label(main_frame, text=f"Error: {ex}",
-                         fg="red", bg=self.bg_light, font=("Segoe UI", 10)).pack(pady=20)
-
-        cal.bind("<<CalendarSelected>>", actualizar_dashboard)
-        # inicializar con fecha de hoy
-        cal.selection_set(datetime.date.today())
-        actualizar_dashboard()
+        """Delegar a DashboardManager"""
+        self.dashboard_manager.mostrar_dashboard()
 
 
         
-    def cambiar_modo_reporte(self):
-        self.limpiar_lista_reporte()
-        if self.modo_filtro.get() == "Ficha":
-            fichas = self.servicio.obtener_fichas()
-            data = [f"{f['id_ficha']} | {f['codigo_ficha']} - {f['nombre_programa']}" for f in fichas]
-        else:
-            self.db.cursor.execute("SELECT documento, nombre_completo FROM estudiantes")
-            data = [f"{e['documento']} | {e['nombre_completo']}" for e in self.db.cursor.fetchall()]
-        # guardar valores originales para poder filtrar
-        self.combo_vals = data
-        self.combo_seleccion['values'] = data
-        self.combo_seleccion.set("Seleccione...")
-        # permitir escritura para filtrar y atar evento
-        self.combo_seleccion.configure(state='normal')
-        self.combo_seleccion.bind('<KeyRelease>', self._filtrar_combo)
 
 
-    def _filtrar_combo(self, event=None):
-        text = self.combo_seleccion.get().lower()
-        if not hasattr(self, 'combo_vals'):
-            return
-        filtered = [v for v in self.combo_vals if text in v.lower()]
-        self.combo_seleccion['values'] = filtered
 
-    def mostrar_selector_rango(self):
-        # Limpia selector previo
-        for w in self.selector_frame.winfo_children():
-            w.destroy()
 
-        rango = self.seg_tiempo.get()
-        self.reporte_fecha_inicio = None
-
-        if rango == "Día":
-            # Mostrar calendario para elegir un día
-            self.cal_rep = Calendar(self.selector_frame, selectmode='day', locale='es_ES', background=self.sena_green, headersbackground=self.sena_dark)
-            self.cal_rep.pack(padx=10, pady=8)
-            # Por defecto, fecha seleccionada hoy
-            try:
-                self.reporte_fecha_inicio = self.cal_rep.selection_get()
-            except Exception:
-                self.reporte_fecha_inicio = datetime.date.today()
-
-            def on_day_sel(e=None):
-                try: self.reporte_fecha_inicio = self.cal_rep.selection_get()
-                except: self.reporte_fecha_inicio = datetime.date.today()
-
-            self.cal_rep.bind("<<CalendarSelected>>", on_day_sel)
-            self.day_specified = True
-
-        elif rango == "Semana":
-            # Generar lista de semanas (inicio lunes) - últimas 52 semanas
-            hoy = datetime.date.today()
-            semanas = []
-            self.week_map = {}
-            self.week_specified = False
-            for i in range(0, 104):
-                inicio = hoy - datetime.timedelta(days=hoy.weekday()) - datetime.timedelta(weeks=i)
-                fin = inicio + datetime.timedelta(days=6)
-                label = f"{inicio.isocalendar()[0]}-W{inicio.isocalendar()[1]:02d}: {inicio.strftime('%d/%m/%Y')} - {fin.strftime('%d/%m/%Y')}"
-                semanas.append(label)
-                self.week_map[label] = inicio
-
-            self.combo_week = ttk.Combobox(self.selector_frame, values=semanas, state='readonly', width=50)
-            self.combo_week.pack(padx=10, pady=8)
-            self.combo_week.set(semanas[0])
-            self.reporte_fecha_inicio = self.week_map[semanas[0]]
-
-            def on_week_sel(e=None):
-                v = self.combo_week.get()
-                self.reporte_fecha_inicio = self.week_map.get(v, datetime.date.today())
-                self.week_specified = True
-
-            self.combo_week.bind('<<ComboboxSelected>>', on_week_sel)
-
-        else: # Mes
-            hoy = datetime.date.today()
-            meses = []
-            self.month_map = {}
-            self.month_specified = False
-            # últimos 36 meses
-            for m in range(0, 36):
-                year = (hoy.year - ((hoy.month - m - 1) // 12))
-                month = ((hoy.month - m - 1) % 12) + 1
-                inicio = datetime.date(year, month, 1)
-                label = f"{inicio.strftime('%B %Y')}"
-                meses.append(label)
-                self.month_map[label] = inicio
-
-            self.combo_month = ttk.Combobox(self.selector_frame, values=meses, state='readonly', width=40)
-            self.combo_month.pack(padx=10, pady=8)
-            self.combo_month.set(meses[0])
-            self.reporte_fecha_inicio = self.month_map[meses[0]]
-
-            def on_month_sel(e=None):
-                v = self.combo_month.get()
-                self.reporte_fecha_inicio = self.month_map.get(v, datetime.date.today())
-                self.month_specified = True
-
-            self.combo_month.bind('<<ComboboxSelected>>', on_month_sel)
-
-    def agregar_item_reporte(self):
-        item = self.combo_seleccion.get()
-        if item and item != "Seleccione..." and item not in self.items_seleccionados:
-            self.items_seleccionados.append(item)
-            ids_v = [i.split(" | ")[0] for i in self.items_seleccionados]
-            self.lbl_lista_rep.configure(text=f"Seleccionados: {', '.join(ids_v)}")
-
-    def limpiar_lista_reporte(self):
-        self.items_seleccionados = []
-        if hasattr(self, 'lbl_lista_rep'):
-            self.lbl_lista_rep.configure(text="Seleccionados: Ninguno")
-
-    def lanzar_reporte(self):
-        # VALIDACIÓN: verificar que haya seleccionado al menos un elemento
-        if not self.items_seleccionados:
-            self.canvas_rep.delete("all")
-            self.canvas_rep.create_text(400, 150, text="⚠️ Debe seleccionar al menos una ficha o aprendiz", fill="#E74C3C", font=("Arial", 12, "bold"))
-            self.btn_exp_rep.configure(state="disabled", fg_color="#888")
-            return
-        
-        self.canvas_rep.delete("all")
-        ids_limpios = [item.split(" | ")[0] for item in self.items_seleccionados]
-        modo = self.modo_filtro.get()
-        rango_sel = self.seg_tiempo.get()
-
-        # Determinar fecha de inicio según selector (si existe)
-        fecha_inicio = None
-        try:
-            if rango_sel == "Día":
-                fecha_inicio = getattr(self, 'reporte_fecha_inicio', datetime.date.today())
-            elif rango_sel == "Semana":
-                fecha_inicio = getattr(self, 'reporte_fecha_inicio', datetime.date.today())
-            else: # Mes
-                fecha_inicio = getattr(self, 'reporte_fecha_inicio', datetime.date.today())
-        except Exception:
-            fecha_inicio = datetime.date.today()
-
-        # Dependiendo del rango, generamos uno o varios periodos a mostrar
-        items = []  # cada item: {'label': str, 'metrics': dict}
-
-        if rango_sel == "Día":
-            datos = self.servicio.obtener_metricas_reporte_multiple(ids_limpios, modo, rango_sel, fecha_inicio)
-            if datos['total_asistencias'] == 0 and datos['expected'] == 0:
-                self.canvas_rep.create_text(300, 150, text="❌ No hay registros para esta selección", fill="red", font=("Arial", 14))
-                return
-            items.append({'label': fecha_inicio.strftime('%d/%m/%Y'), 'metrics': datos})
-
-        elif rango_sel == "Semana":
-            # Si el usuario especificó una semana, mostramos solo esa; si no, mostramos 4 semanas del mes
-            if getattr(self, 'week_specified', False):
-                datos = self.servicio.obtener_metricas_reporte_multiple(ids_limpios, modo, rango_sel, fecha_inicio)
-                items.append({'label': f"Semana {fecha_inicio.isocalendar()[1]} ({fecha_inicio.strftime('%d/%m')})", 'metrics': datos})
-            else:
-                # primeras 4 semanas (lunes) del mes de fecha_inicio
-                year = fecha_inicio.year
-                month = fecha_inicio.month
-                first = datetime.date(year, month, 1)
-                # primer lunes <= first
-                first_monday = first - datetime.timedelta(days=first.weekday())
-                for i in range(4):
-                    start = first_monday + datetime.timedelta(weeks=i)
-                    fin = start + datetime.timedelta(days=6)
-                    label = f"W{start.isocalendar()[1]} {start.strftime('%d/%m')}"
-                    d = self.servicio.obtener_metricas_reporte_multiple(ids_limpios, modo, 'Semana', start)
-                    items.append({'label': label, 'metrics': d})
-
-        else:  # Mes
-            if getattr(self, 'month_specified', False):
-                datos = self.servicio.obtener_metricas_reporte_multiple(ids_limpios, modo, rango_sel, fecha_inicio)
-                items.append({'label': fecha_inicio.strftime('%B %Y'), 'metrics': datos})
-            else:
-                year = fecha_inicio.year
-                today = datetime.date.today()
-                last_month = today.month if year == today.year else 12
-                for m in range(1, last_month + 1):
-                    start = datetime.date(year, m, 1)
-                    d = self.servicio.obtener_metricas_reporte_multiple(ids_limpios, modo, 'Mes', start)
-                    items.append({'label': start.strftime('%b') , 'metrics': d})
-
-        # Si no hay datos en todos los items
-        if not any(it['metrics']['total_asistencias'] or it['metrics'].get('expected', 0) for it in items):
-            self.canvas_rep.create_text(300, 150, text="❌ No hay registros para esta selección", fill="red", font=("Arial", 14))
-            self.btn_exp_rep.configure(state="disabled", fg_color="#888")
-            return
-        # almacenar items para permitir exportación
-        self.last_report_items = items
-        self.last_report_params = (ids_limpios, modo, rango_sel, fecha_inicio)
-
-        # Dibujar en el canvas
-        self.canvas_rep.update_idletasks()
-        W = self.canvas_rep.winfo_width() or 800
-        H = self.canvas_rep.winfo_height() or 300
-        pad = 30
-        n = len(items)
-        col_w = max(100, (W - 2*pad) / max(1, n))
-        base_y = int(H * 0.55)  # Ajustado para dejar espacio al resumen
-        max_h = int(H * 0.3)
-        
-        # RESUMEN DE TOTALES
-        total_global_asist = sum(it['metrics'].get('total_asistencias', 0) for it in items)
-        total_global_faltas = sum(it['metrics'].get('faltas', 0) for it in items)
-        total_global_retardos = sum(it['metrics'].get('retardos', 0) for it in items)
-        resumen_txt = f"RESUMEN GLOBAL: Asistencias: {total_global_asist} | Faltas: {total_global_faltas} | Retardos: {total_global_retardos}"
-        self.canvas_rep.create_text(W//2, 20, text=resumen_txt, font=("Arial", 11, "bold"), fill="#2D5A27")
-
-        for i, it in enumerate(items):
-            m = it['metrics']
-            expected = m.get('expected', 0) or 0
-            total = m.get('total_asistencias', 0) or 0
-            faltas = m.get('faltas', 0) or 0
-            retardos = m.get('retardos', 0) or 0
-            pct = (total / expected) if expected > 0 else 0
-            pct_clamped = max(0, min(1, pct))
-
-            x_center = int(pad + i * col_w + col_w/2)
-            bar_w = int(min(80, col_w * 0.6))
-            bar_h = int(pct_clamped * max_h)
-            x0 = x_center - bar_w//2
-            y0 = base_y - bar_h
-            x1 = x_center + bar_w//2
-            y1 = base_y
-            color = self.sena_green if pct_clamped > 0.8 else ("orange" if pct_clamped > 0.3 else "#E74C3C")
-
-            # barra de referencia
-            self.canvas_rep.create_rectangle(x_center - bar_w//2, base_y - max_h, x_center + bar_w//2, base_y, fill="#EEE", outline="")
-            # barra actual
-            self.canvas_rep.create_rectangle(x0, y0, x1, y1, fill=color, outline="")
-
-            # etiqueta y métricas
-            self.canvas_rep.create_text(x_center, base_y + 18, text=it['label'], font=("Arial", 10, "bold"))
-            self.canvas_rep.create_text(x_center, base_y + 36, text=f"A:{total}  F:{faltas}  R:{retardos}", font=("Arial", 9))
-
-        # Habilitar botón exportar
-        self.btn_exp_rep.configure(state="normal", fg_color="#3A7FF6")
         
     def actualizar_password_ventana(self, documento):
-        v = tk.Toplevel(self.root); v.title("Seguridad C.R.S"); v.geometry("450x520"); v.configure(bg=self.bg_light); v.grab_set()
-        # impedir cerrar la ventana sin actualizar contraseña
-        def bloquear_cierre():
-            messagebox.showwarning("Obligatorio", "Debe cambiar la contraseña antes de continuar.")
-        v.protocol("WM_DELETE_WINDOW", bloquear_cierre)
-        tk.Label(v, text="🔒 CAMBIO OBLIGATORIO", font=("bold", 12), bg=self.bg_light, fg="#d32f2f").pack(pady=10)
-        pass_var = tk.StringVar(); e = ttk.Entry(v, show="*", textvariable=pass_var, font=("Segoe UI", 12)); e.pack(pady=10, padx=40, fill="x")
-        req_frame = tk.Frame(v, bg=self.bg_light); req_frame.pack(pady=10, padx=40, fill="x")
-        requisitos = {
-            "long":  tk.Label(req_frame, text="• Mínimo 8 caracteres", bg=self.bg_light, fg="red", anchor="w"),
-            "upper": tk.Label(req_frame, text="• Al menos una mayúscula", bg=self.bg_light, fg="red", anchor="w"),
-            "lower": tk.Label(req_frame, text="• Al menos una minúscula", bg=self.bg_light, fg="red", anchor="w"),
-            "num":   tk.Label(req_frame, text="• Al menos un número", bg=self.bg_light, fg="red", anchor="w")
-        }
-        for lbl in requisitos.values(): lbl.pack(fill="x")
-        def validar(*args):
-            p = pass_var.get()
-            cond = {"long": len(p)>=8, "upper": any(c.isupper() for c in p), "lower": any(c.islower() for c in p), "num": any(c.isdigit() for c in p)}
-            for k, c in cond.items(): requisitos[k].config(fg="#39A900" if c else "red")
-            return all(cond.values())
-        pass_var.trace_add("write", validar)
-        def save():
-            if validar():
-                self.db.cursor.execute("UPDATE estudiantes SET password=%s, cambio_pass=1 WHERE documento=%s", (pass_var.get(), documento))
-                self.db.conexion.commit(); messagebox.showinfo("C.R.S", "Seguridad configurada");
-                v.destroy()
-        tk.Button(v, text="GUARDAR Y ENTRAR", bg="#39A900", fg="white", command=save).pack(pady=20)
+        """Delegar a PasswordManager"""
+        self.password_manager.actualizar_password_ventana(documento)
+    
+    def mostrar_panel_instructor_ui(self, instructor):
+        """Muestra el panel de instructor usando PantallaInstructor"""
+        self.show_frame('admin')  # Reutilizar frame de admin
+        self.limpiar_pantalla()
+        from admin_panel import PantallaInstructor
+        PantallaInstructor(self.frames['admin'], self.db, self.servicio, 
+                          instructor, self)
+    
+    def mostrar_panel_instructor(self, admin_data):
+        """Muestra el panel de instructor cuando accede como admin/instructor"""
+        # Obtener datos del instructor desde la tabla usuarios_admin
+        self.show_frame('admin')
+        self.limpiar_pantalla()
+        from admin_panel import PantallaInstructor
+        PantallaInstructor(self.frames['admin'], self.db, self.servicio, 
+                          admin_data, self)
+    
+    def actualizar_password_instructor_ventana(self, documento):
+        """Actualizar contraseña para instructor"""
+        ventana = tk.Toplevel(self.root)
+        ventana.title("Actualizar Contraseña")
+        ventana.geometry("400x250")
+        ventana.resizable(False, False)
+        
+        ctk.CTkLabel(ventana, text="Actualizar Contraseña de Instructor", 
+                    font=("Segoe UI", 14, "bold")).pack(pady=15)
+        
+        ctk.CTkLabel(ventana, text="Nueva Contraseña:").pack(anchor="w", padx=20, pady=(10, 0))
+        ent_pass = ctk.CTkEntry(ventana, show="*", width=300)
+        ent_pass.pack(padx=20, pady=5)
+        
+        ctk.CTkLabel(ventana, text="Confirmar Contraseña:").pack(anchor="w", padx=20, pady=(10, 0))
+        ent_pass2 = ctk.CTkEntry(ventana, show="*", width=300)
+        ent_pass2.pack(padx=20, pady=5)
+        
+        def actualizar():
+            pass1 = ent_pass.get()
+            pass2 = ent_pass2.get()
+            
+            if not pass1 or not pass2:
+                messagebox.showwarning("Validación", "Ingrese ambas contraseñas")
+                return
+            
+            if pass1 != pass2:
+                messagebox.showwarning("Validación", "Las contraseñas no coinciden")
+                return
+            
+            try:
+                self.db.cursor.execute(
+                    "UPDATE instructores SET password=%s, cambio_pass=1 WHERE documento=%s",
+                    (pass1, documento)
+                )
+                self.db.conexion.commit()
+                messagebox.showinfo("Éxito", "✅ Contraseña actualizada")
+                ventana.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error: {str(e)}")
+        
+        ctk.CTkButton(ventana, text="Actualizar", command=actualizar).pack(pady=20, padx=20, fill="x")
+    
+    # ===== MÉTODOS DE CACHÉ para mejorar rendimiento =====
+    def obtener_fichas_cached(self):
+        """Retorna fichas con caché (TTL: 1 hora)"""
+        import time
+        ahora = time.time()
+        if self._cache_fichas is None or (ahora - self._cache_fichas_timestamp) > CACHE['FICHAS_TTL']:
+            self._cache_fichas = self.servicio.obtener_fichas()
+            self._cache_fichas_timestamp = ahora
+        return self._cache_fichas
+    
+    def obtener_aprendices_cached(self):
+        """Retorna aprendices activos con caché (TTL: 30 min)"""
+        import time
+        ahora = time.time()
+        if self._cache_aprendices is None or (ahora - self._cache_aprendices_timestamp) > CACHE['APRENDICES_TTL']:
+            self.db.cursor.execute("SELECT documento, nombre_completo FROM estudiantes WHERE estado=1")
+            self._cache_aprendices = self.db.cursor.fetchall()
+            self._cache_aprendices_timestamp = ahora
+        return self._cache_aprendices
+    
+    def limpiar_cache(self):
+        """Limpia todos los cachés (útil después de cambios)"""
+        self._cache_fichas = None
+        self._cache_aprendices = None
 
 if __name__ == "__main__":
     root = ctk.CTk() 

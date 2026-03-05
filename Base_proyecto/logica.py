@@ -45,8 +45,8 @@ class AsistenciaService:
             
             self.db.cursor.execute("SELECT documento FROM estudiantes_eliminados WHERE documento=%s", (documento,))
             if self.db.cursor.fetchone():
-                return False, "⚠️ El aprendiz está en la PAPELERA. Contacte al administrador."
-            return False, "❌ El aprendiz NO existe en el sistema."
+                return False, "El aprendiz está en la PAPELERA. Contacte al administrador."
+            return False, "El aprendiz NO existe en el sistema."
 
         
         self.db.cursor.execute("SELECT id_asistencia FROM asistencias WHERE documento_estudiante=%s AND fecha_salida IS NULL", (documento,))
@@ -193,6 +193,18 @@ class AsistenciaService:
         
         query = "SELECT * FROM asistencias WHERE documento_estudiante = %s AND DATE(fecha_registro) = %s"
         self.db.cursor.execute(query, (documento, fecha))
+        return self.db.cursor.fetchall()
+
+    def obtener_registros_mes(self, documento, fecha_inicio, fecha_fin):
+        """Obtiene todos los registros de asistencia en un rango de fechas para un usuario.
+        Devuelve lista de dicts con 'fecha_registro', 'fecha_salida', etc.
+        """
+        query = """SELECT * FROM asistencias 
+                   WHERE documento_estudiante = %s 
+                   AND DATE(fecha_registro) >= %s 
+                   AND DATE(fecha_registro) <= %s
+                   ORDER BY fecha_registro"""
+        self.db.cursor.execute(query, (documento, fecha_inicio, fecha_fin))
         return self.db.cursor.fetchall()
 
     
@@ -366,3 +378,104 @@ class AsistenciaService:
         except Exception as e:
             logging.exception(f"Error en obtener_metricas_reporte_multiple: {e}")
             return {'expected': 0, 'total_asistencias': 0, 'faltas': 0, 'retardos': 0, 'detalles': [], 'fecha_inicio': None, 'fecha_fin': None}
+
+    # ===== MÉTODOS PARA INSTRUCTORES =====
+
+    def login_instructor(self, usuario, password):
+        """Autentica un instructor con usuario y contraseña"""
+        q = "SELECT * FROM instructores WHERE usuario=%s AND password=%s"
+        self.db.cursor.execute(q, (usuario, password))
+        return self.db.cursor.fetchone()
+
+    def obtener_fichas_instructor(self, id_instructor):
+        """Obtiene las fichas asignadas a un instructor"""
+        query = """SELECT f.id_ficha, f.codigo_ficha, f.nombre_programa, f.jornada
+                   FROM fichas f
+                   INNER JOIN fichas_asignadas fa ON f.id_ficha = fa.id_ficha
+                   WHERE fa.id_instructor = %s"""
+        self.db.cursor.execute(query, (id_instructor,))
+        return self.db.cursor.fetchall()
+
+    def obtener_estudiantes_ficha(self, id_ficha):
+        """Obtiene todos los estudiantes de una ficha"""
+        query = """SELECT e.documento, e.nombre_completo, e.correo, e.id_ficha
+                   FROM estudiantes e
+                   WHERE e.id_ficha = %s
+                   ORDER BY e.nombre_completo"""
+        self.db.cursor.execute(query, (id_ficha,))
+        return self.db.cursor.fetchall()
+
+    def registrar_falta(self, documento_estudiante, id_ficha, id_competencia, fecha_falta, 
+                       tipo_falta="Inasistencia", razon="", registrado_por=""):
+        """Registra una falta en el sistema"""
+        try:
+            query = """INSERT INTO faltas 
+                      (documento_estudiante, id_ficha, id_competencia, fecha_falta, tipo_falta, razon, registrado_por)
+                      VALUES (%s, %s, %s, %s, %s, %s, %s)
+                      ON DUPLICATE KEY UPDATE 
+                      tipo_falta=%s, razon=%s, fecha_registro=NOW()"""
+            
+            self.db.cursor.execute(query, (
+                documento_estudiante, id_ficha, id_competencia, fecha_falta, 
+                tipo_falta, razon, registrado_por,
+                tipo_falta, razon
+            ))
+            self.db.conexion.commit()
+            return True, "✅ Falta registrada correctamente."
+        except Exception as e:
+            logging.error(f"Error registrando falta: {e}", exc_info=True)
+            return False, f"❌ Error: {str(e)[:100]}"
+
+    def eliminar_falta(self, id_falta):
+        """Elimina un registro de falta"""
+        try:
+            self.db.cursor.execute("DELETE FROM faltas WHERE id_falta = %s", (id_falta,))
+            self.db.conexion.commit()
+            return self.db.cursor.rowcount > 0
+        except Exception as e:
+            logging.error(f"Error eliminando falta: {e}")
+            return False
+
+    def obtener_faltas_ficha(self, id_ficha, fecha_inicio=None, fecha_fin=None):
+        """Obtiene todas las faltas de una ficha en un rango de fechas"""
+        if not fecha_inicio:
+            fecha_inicio = datetime.date.today().replace(day=1)
+        if not fecha_fin:
+            fecha_fin = datetime.date.today()
+        
+        query = """SELECT f.*, e.nombre_completo, c.nombre_competencia
+                   FROM faltas f
+                   INNER JOIN estudiantes e ON f.documento_estudiante = e.documento
+                   INNER JOIN competencias c ON f.id_competencia = c.id_competencia
+                   WHERE f.id_ficha = %s
+                   AND f.fecha_falta BETWEEN %s AND %s
+                   ORDER BY f.fecha_falta DESC"""
+        self.db.cursor.execute(query, (id_ficha, fecha_inicio, fecha_fin))
+        return self.db.cursor.fetchall()
+
+    def obtener_faltas_estudiante(self, documento_estudiante, id_ficha=None):
+        """Obtiene todas las faltas de un estudiante"""
+        if id_ficha:
+            query = """SELECT * FROM faltas WHERE documento_estudiante = %s AND id_ficha = %s
+                       ORDER BY fecha_falta DESC"""
+            self.db.cursor.execute(query, (documento_estudiante, id_ficha))
+        else:
+            query = """SELECT * FROM faltas WHERE documento_estudiante = %s
+                       ORDER BY fecha_falta DESC"""
+            self.db.cursor.execute(query, (documento_estudiante,))
+        return self.db.cursor.fetchall()
+
+    def obtener_resumen_faltas(self, id_ficha, fecha_inicio=None, fecha_fin=None):
+        """Obtiene un resumen de faltas por tipo para una ficha"""
+        if not fecha_inicio:
+            fecha_inicio = datetime.date.today().replace(day=1)
+        if not fecha_fin:
+            fecha_fin = datetime.date.today()
+        
+        query = """SELECT tipo_falta, COUNT(*) as cantidad
+                   FROM faltas
+                   WHERE id_ficha = %s
+                   AND fecha_falta BETWEEN %s AND %s
+                   GROUP BY tipo_falta"""
+        self.db.cursor.execute(query, (id_ficha, fecha_inicio, fecha_fin))
+        return self.db.cursor.fetchall()

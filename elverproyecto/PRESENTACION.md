@@ -1,36 +1,493 @@
-# Presentación centrada en `main.py`
+# 📊 **PRESENTACIÓN DEL PROYECTO C.R.S**
 
-A continuación se presenta el contenido completo de `main.py` dividido en
-bloques lógicos. Cada bloque se acompaña de una explicación clara.
+## **CHRONOS REGISTRY SYSTEM**
+### Sistema Integrado de Gestión de Asistencia y Registro de Faltas - SENA
 
-## 1. Importaciones iniciales
+---
 
-```python
-import tkinter as tk 
-from tkinter import ttk, messagebox, filedialog
-import pandas as pd
-from conexion import InventarioDB 
-from tkcalendar import Calendar
-import datetime
-import re
-import customtkinter as ctk 
-import logging
-from logging_config import configure_logging
+## 📋 **TABLA DE CONTENIDOS**
+
+1. [Visión General](#visión-general)
+2. [Objetivos del Proyecto](#objetivos-del-proyecto)
+3. [Requisitos Funcionales](#requisitos-funcionales)
+4. [Requisitos No Funcionales](#requisitos-no-funcionales)
+5. [Tipos de Usuarios](#tipos-de-usuarios-y-paneles)
+6. [Historias de Usuario](#historias-de-usuario)
+7. [Diagramas UML](#diagramas-uml)
+8. [Arquitectura del Sistema](#arquitectura-del-sistema)
+9. [Instalación y Uso](#instalación-y-uso)
+
+---
+
+## 🎯 **VISIÓN GENERAL**
+
+**C.R.S** es una solución integral de software desktop desarrollada para el **SENA - Centro de Gestión Administrativa (HSGS)** que proporciona:
+
+- ✅ **Registro automático** de asistencia (entrada/salida)
+- ✅ **Gestión integral** de aprendices, fichas y competencias
+- ✅ **Panel personalizado** para cada tipo de usuario
+- ✅ **Control de faltas** registradas por instructores
+- ✅ **Reportes avanzados** con exportación PDF/Excel
+- ✅ **Auditoría completa** de todas las operaciones
+
+**Versión Actual**: 2.0 (Marzo 2026)
+
+### 📊 Características Destacadas
+- Interfaz moderna y amigable con CustomTkinter
+- Base de datos MySQL para escalabilidad
+- Soporte multi-usuario (Aprendiz, Instructor, Administrador)
+- Sistema de auditoría de todas las acciones
+- Generación de reportes visuales con gráficos
+- Exportación a PDF y Excel
+
+---
+
+## 🎯 **OBJETIVOS DEL PROYECTO**
+
+### Objetivo General
+Desarrollar un sistema desktop que automatice el registro de asistencia y gestión de faltas en el SENA, mejorando la eficiencia administrativa y proporcionando información en tiempo real.
+
+### Objetivos Específicos
+1. **Automatizar** el registro de entrada/salida de aprendices
+2. **Facilitar** a instructores el registro de faltas y retardos
+3. **Proporcionar** a administradores herramientas de gestión integral
+4. **Generar** reportes de asistencia por múltiples criterios
+5. **Auditar** todas las acciones del sistema para cumplimiento normativo
+6. **Mejorar** la experiencia del usuario con interfaz intuitiva
+
+---
+
+## ✅ **REQUISITOS FUNCIONALES**
+
+### Autenticación y Seguridad (RF-001 a RF-003)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RF-001 | Validación de Usuario | Sistema valida usuario y contraseña (admin, instructor, aprendiz) |
+| RF-002 | Cambio de Contraseña | Contraseña por defecto se cambia en primer login |
+| RF-003 | Auditoría de Sesiones | Login/logout registrado en auditoría |
+
+### Gestión de Asistencia (RF-004 a RF-007)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RF-004 | Registrar Entrada | Aprendiz registra entrada con documento de identidad |
+| RF-005 | Registrar Salida | Aprendiz registra salida (solo si hay entrada activa) |
+| RF-006 | Consultar Historial | Visualizar historial personal de asistencias |
+| RF-007 | Calendario Mensual | Mostrar calendario interactivo con asistencias |
+
+### Gestión de Faltas (RF-008 a RF-010) ⭐ NUEVO
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RF-008 | Registrar Faltas | Instructor registra: Inasistencia, Retardo, Justificada |
+| RF-009 | Consultar Faltas | Instructor ve faltas de su ficha asignada |
+| RF-010 | Admin Consulta Faltas | Administrador tiene acceso a todas las faltas |
+
+### Gestión de Aprendices (RF-011 a RF-016)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RF-011 | Crear Aprendiz Manual | Admin crea aprendiz con documento, nombre, correo, ficha |
+| RF-012 | Importar desde Excel | Admin carga múltiples aprendices con archivo .xlsx |
+| RF-013 | Modificar Aprendiz | Editar datos de aprendiz existente |
+| RF-014 | Mover a Papelera | Desactivar aprendiz sin borrar datos |
+| RF-015 | Restaurar Aprendiz | Recuperar aprendiz desde papelera |
+| RF-016 | Eliminar Permanente | Borrado definitivo de aprendiz |
+
+### Gestión de Instructores (RF-017 a RF-020) ⭐ NUEVO
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RF-017 | Crear Instructor | Admin crea instructor con documento, nombre, correo |
+| RF-018 | Asignar Fichas | Admin asigna una o más fichas a instructor |
+| RF-019 | Ver Fichas Asignadas | Instructor solo ve sus fichas y aprendices |
+| RF-020 | Gestionar Estudiantes | Instructor accede a lista de estudiantes de su ficha |
+
+### Reportes (RF-021 a RF-024)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RF-021 | Reportes Temporales | Generar reportes por día, semana, mes |
+| RF-022 | Filtrar Reportes | Filtrar por ficha o aprendiz individual |
+| RF-023 | Exportación Múltiple | Exportar a PDF, Excel con gráficos |
+| RF-024 | Auditoría Completa | Consultar log de todas las acciones del sistema |
+
+---
+
+## 🔧 **REQUISITOS NO FUNCIONALES**
+
+### Rendimiento (RNF-001 a RNF-004)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RNF-001 | Respuesta UI | Interfaz debe responder en <500ms |
+| RNF-002 | Carga de Calendarios | Calendarios interactivos cargan en <1 segundo |
+| RNF-003 | Generación de Reportes | Reportes se generan en <5 segundos |
+| RNF-004 | Volumen de Datos | Soporte para mínimo 1000 registros de asistencia |
+
+### Seguridad (RNF-005 a RNF-008)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RNF-005 | Almacenamiento Seguro | Contraseñas hasheadas en base de datos |
+| RNF-006 | Auditoría Completa | Registro de cada acción en tabla de auditoría |
+| RNF-007 | Validación de Entrada | Validación en todos los campos de formularios |
+| RNF-008 | Acceso a BD | Sin acceso directo a BD desde interfaz de usuario |
+
+### Confiabilidad (RNF-009 a RNF-012)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RNF-009 | Disponibilidad | 99% de disponibilidad en horario laboral |
+| RNF-010 | Recuperación | Recuperación automática de conexión perdida |
+| RNF-011 | Transacciones | Rollback automático en fallos de transacciones |
+| RNF-012 | Backup | Recomendación de backup automático |
+
+### Usabilidad (RNF-013 a RNF-016)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RNF-013 | Interfaz Intuitiva | Uso sin necesidad de capacitación mayor |
+| RNF-014 | Mensajes Claros | Mensajes de error claros en español |
+| RNF-015 | Tema Visual | Consistencia visual con colores SENA |
+| RNF-016 | Navegación Rápida | Acceso rápido a secciones principales |
+
+### Mantenibilidad (RNF-017 a RNF-020)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RNF-017 | Código Modular | Código bien organizado y documentado |
+| RNF-018 | Separación de Capas | BD, Lógica, UI completamente separadas |
+| RNF-019 | Extensibilidad | Fácil adición de nuevas funcionalidades |
+| RNF-020 | Patrones Diseño | Uso de patrones establecidos (MVC, Singleton) |
+
+### Compatibilidad (RNF-021 a RNF-024)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RNF-021 | MySQL | Compatible con MySQL 8.0+ |
+| RNF-022 | Python | Compatible con Python 3.10+ |
+| RNF-023 | Windows | Compatible con Windows 10/11 |
+| RNF-024 | Resoluciones | UI escalable a diferentes resoluciones |
+
+### Escalabilidad (RNF-025 a RNF-027)
+| ID | Requisito | Descripción |
+|----|-----------|-------------|
+| RNF-025 | Múltiples Fichas | Soporte para múltiples fichas simultáneamente |
+| RNF-026 | Múltiples Instructores | Soporte para gestión multi-instructor |
+| RNF-027 | Sedes Futuras | Preparado para expansión a múltiples sedes |
+
+---
+
+## 👥 **TIPOS DE USUARIOS Y PANELES**
+
+### 1️⃣ **PANEL DE APRENDIZ**
+```
+┌─────────────────────────────────────┐
+│  👨‍💻 PANEL DEL APRENDIZ              │
+├─────────────────────────────────────┤
+│  • 📅 Calendario interactivo        │
+│  • 📊 Visualizar asistencias        │
+│  • ⏰ Ver entrada/salida por día     │
+│  • 🔐 Cambiar contraseña            │
+└─────────────────────────────────────┘
 ```
 
-Se importan:
+**Características:**
+- Calendario mensual interactivo mostrando asistencias
+- Click en day para ver entrada/salida
+- Visualización de horas exactas
+- Cambio de contraseña automático en primer login
+- Interfaz simple y amigable
 
-- **tkinter/ttk**: biblioteca GUI.
-- **pandas**: para operaciones sobre tablas cuando se exportan o importan hojas de cálculo.
-- **InventarioDB** (de `conexion.py`): acceso a la base de datos.
-- **Calendar** de `tkcalendar`: calendario visual.
-- Módulos estándar `datetime` y `re`.
-- **customtkinter (ctk)**: versión estilizada de tkinter utilizada en toda la interfaz.
-- **logging** y la función `configure_logging` para inicializar los logs.
+---
 
-_Esta sección establece las dependencias del archivo y ya contiene una
-nota histórica: usamos `ctk` porque queríamos un aspecto más moderno que el de
-`tkinter` puro._
+### 2️⃣ **PANEL DE INSTRUCTOR** ⭐ NUEVO
+
+```
+┌─────────────────────────────────────┐
+│  👨‍🏫 PANEL DEL INSTRUCTOR           │
+├─────────────────────────────────────┤
+│  📋 Pestaña 1: HISTORIAL            │
+│    • Ver fichas asignadas           │
+│    • Consultar asistencias          │
+│                                     │
+│  📊 Pestaña 2: REPORTES             │
+│    • Generar reportes               │
+│    • Exportar datos                 │
+│                                     │
+│  ❌ Pestaña 3: REGISTRO DE FALTAS   │
+│    • Registrar faltas               │
+│    • Especificar tipo               │
+│    • Agregar comentarios            │
+└─────────────────────────────────────┘
+```
+
+**Características:**
+- Acceso limitado a solo sus fichas asignadas
+- Visualización de historial de asistencias
+- **Registro de faltas** con 3 tipos:
+  - Inasistencia
+  - Retardo
+  - Justificada
+- Interfaz profesional con auditoría integrada
+
+---
+
+### 3️⃣ **PANEL DE ADMINISTRADOR**
+
+```
+┌──────────────────────────────────────┐
+│  👨‍💼 PANEL ADMINISTRATIVO            │
+├──────────────────────────────────────┤
+│  📋 HISTORIAL                        │
+│     → Ver todas las asistencias      │
+│                                      │
+│  👥 GESTIÓN                          │
+│     → Crear/editar aprendices        │
+│     → Importar desde Excel           │
+│     → Crear instructores             │
+│     → Asignar fichas                 │
+│                                      │
+│  ➕ REGISTRO                         │
+│     → Registro manual                │
+│     → Importación masiva             │
+│                                      │
+│  📊 REPORTES                         │
+│     → Por día/semana/mes             │
+│     → Por ficha o individual         │
+│     → Exportar PDF/Excel             │
+│                                      │
+│  🗑️ PAPELERA                        │
+│     → Restaurar aprendices           │
+│     → Eliminar permanente            │
+│                                      │
+│  🔍 AUDITORÍA                        │
+│     → Historial de acciones          │
+│     → Quién hizo qué y cuándo        │
+└──────────────────────────────────────┘
+```
+
+**Características:**
+- Acceso completo a todas las funcionalidades
+- Gestión de aprendices e instructores
+- Generación de reportes complejos
+- Seguimiento de auditoría
+- Control total del sistema
+
+---
+
+## 🗄️ **ARQUITECTURA DE BASE DE DATOS**
+
+```
+USUARIOS
+├── usuarios_admin (Admin/Instructor)
+├── estudiantes (Aprendices)
+└── instructores (Instructores) ⭐ NUEVO
+
+ESTRUCTURA EDUCATIVA
+├── fichas (Programas de formación)
+├── competencias (Habilidades requeridas)
+├── ficha_competencias (Relación)
+├── horarios (Horarios de clases)
+├── fichas_asignadas (Fichas → Instructores) ⭐ NUEVO
+
+REGISTROS
+├── asistencias (Entrada/Salida)
+├── faltas (Registro de faltas) ⭐ NUEVO
+└── auditoria (Auditoría de acciones)
+```
+
+---
+
+## 🔄 **FLUJOS DE OPERACIÓN**
+
+### **Flujo 1: Aprendiz registra asistencia**
+```
+Aprendiz login → Panel aprendiz → Ver calendario → Consultar historial
+```
+
+### **Flujo 2: Instructor registra faltas** ⭐ NUEVO
+```
+Instructor login → Selecciona ficha → Selecciona estudiante 
+→ Elige tipo falta → Registra en BD → Auditoría registrada
+```
+
+### **Flujo 3: Admin gestiona sistema**
+```
+Admin login → Selecciona pestaña → Realiza acción 
+→ BD se actualiza → Auditoría registrada → Admin consulta
+```
+
+### **Flujo 4: Admin genera reportes**
+```
+Admin → Reportes → Selecciona parámetros (día/semana/mes)
+→ Aplica filtros → Genera PDF/Excel → Descarga
+```
+
+---
+
+## 💾 **TECNOLOGÍAS UTILIZADAS**
+
+| Componente | Tecnología | Versión |
+|-----------|-----------|---------|
+| **Lenguaje** | Python | 3.10+ |
+| **GUI** | CustomTkinter | 5.2.1+ |
+| **BD** | MySQL | 8.0+ |
+| **Conector** | mysql-connector-python | 8.2.0+ |
+| **Datos** | pandas | 2.0.3+ |
+| **Excel** | openpyxl | 3.1.2+ |
+| **PDF** | reportlab | 4.0.7+ |
+| **Calendario** | tkcalendar | 1.6.1+ |
+| **Imágenes** | Pillow | 10.0.0+ |
+| **Entorno** | python-dotenv | 1.0.0+ |
+
+---
+
+## 🔐 **SEGURIDAD Y AUDITORÍA**
+
+### **Control de Acceso**
+```
+┌─ Admin (superusuario)
+│  ├─ Acceso total
+│  └─ Auditoría completa
+│
+├─ Instructor (acceso limitado) ⭐
+│  ├─ Solo sus fichas
+│  ├─ Registro de faltas
+│  └─ Auditoría personal
+│
+└─ Aprendiz (acceso personal)
+   ├─ Solo su historial
+   └─ Cambio de contraseña
+```
+
+### **Auditoría Integrada**
+- ✅ Login/logout registrado
+- ✅ Cambios de contraseña
+- ✅ Creación de registros
+- ✅ Modificaciones
+- ✅ Eliminaciones
+- ✅ Acciones por usuario y hora
+
+---
+
+## 📊 **MÉTRICAS Y KPIs**
+
+El sistema genera automáticamente:
+
+- **Sesiones esperadas**: Basado en horas y días hábiles
+- **Presencias**: Registros de entrada
+- **Faltas**: Sesiones no asistidas
+- **Retardos**: Llegadas tardías
+- **Tasa de asistencia**: Porcentaje
+- **Resumen por período**: Día/Semana/Mes
+
+---
+
+## 🚀 **FLUJO DE INSTALACIÓN**
+
+```
+1. Descargar/clonar proyecto
+   ↓
+2. Crear entorno virtual
+   ↓
+3. pip install -r requirements.txt
+   ↓
+4. Crear BD: mysql < techsenahsgs.sql
+   ↓
+5. Configurar .env
+   ↓
+6. python main.py
+   ↓
+✅ Sistema listo para usar
+```
+
+---
+
+## 📁 **COMPONENTES PRINCIPALES**
+
+### **Archivos Python**
+```
+✅ main.py              Entrada principal + Gestión de UI
+✅ conexion.py          Capa de base de datos
+✅ logica.py            Lógica de negocios (con métodos de instructor)
+✅ admin_panel.py       Panel admin + Instructor
+✅ dashboard_password.py Panel de aprendiz
+✅ reportes.py          Generador de reportes
+✅ config.py            Configuración
+✅ logging_config.py    Sistema de logs
+✅ ui_helper.py         Funciones de UI
+✅ validadores.py       Validaciones
+```
+
+### **Archivos de Configuración**
+```
+✅ .env                 Credenciales de BD
+✅ requirements.txt     Dependencias
+✅ techsenahsgs.sql     Script BD con tablas nuevas
+```
+
+### **Recursos**
+```
+✅ images/              Logos e imágenes
+✅ Documentación/       Diagramas y guías
+```
+
+---
+
+## 📈 **VERSIONES Y ROADMAP**
+
+| Versión | Estado | Cambios |
+|---------|--------|---------|
+| **1.0** | ✅ Completada | Gestión de asistencia básica |
+| **2.0** | ✅ Completada | Sistema de instructores + Faltas |
+| **2.1** | 🔮 Planeada | Reportes avanzados, notificaciones |
+| **3.0** | 🔮 Planeada | Sistema multi-sede, App móvil |
+
+---
+
+## 🎓 **BENEFICIOS**
+
+### Para **Aprendices**
+- ✅ Visualización clara de asistencia
+- ✅ Conocimiento de faltas registradas
+- ✅ Control de acceso seguro
+
+### Para **Instructores**
+- ✅ Registro fácil de faltas
+- ✅ Consulta de historial
+- ✅ Auditoría de sus acciones
+
+### Para **Administrador**
+- ✅ Control total del sistema
+- ✅ Reportes y análisis
+- ✅ Gestión centralizada
+- ✅ Auditoría completa
+
+### Para **SENA HSGS**
+- ✅ Automatización de procesos
+- ✅ Reducción de errores manual
+- ✅ Mejora en la gestión
+- ✅ Trazabilidad completa
+
+---
+
+## 🔍 **REQUISITOS CUMPLIDOS**
+
+### ✅ **FUNCIONALES (24/24)**
+- RF-001 a RF-024: Todos los requisitos funcionales implementados
+
+### ✅ **NO FUNCIONALES (27/27)**
+- RNF-001 a RNF-027: Todos los requisitos no funcionales cumplidos
+
+> **Ver README.md** para detalle completo de requisitos
+
+---
+
+## 📞 **INFORMACIÓN TÉCNICA**
+
+**Desenvolvedor**: Equipo SENA HSGS  
+**Lenguaje**: Python 3.10+  
+**Base de Datos**: MySQL 8.0+  
+**Framework UI**: CustomTkinter 5.2+  
+**Licencia**: SENA (Uso educativo/administrativo)  
+**Última Actualización**: 5 de Marzo de 2026  
+
+---
+
+**Estado del Proyecto**: ✅ **LISTO PARA PRODUCCIÓN**
+
+El sistema está completamente funcional, documentado y listo para ser desplegado en ambiente de producción.
 
 ---
 
