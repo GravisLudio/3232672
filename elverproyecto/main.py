@@ -394,10 +394,16 @@ class SistemaHSGSCRS:
                 self.db.registrar_auditoria(self.instructor_actual, "login instructor")
             except Exception as ex:
                 logging.error("Error registrando auditoría (login instructor)", exc_info=True)
-            
+
             if instructor.get('cambio_pass') == 0 or password == 'sena123':
-                self.actualizar_password_instructor_ventana(instructor['documento'])
-            self.mostrar_panel_instructor_ui(instructor)
+                # Mostrar ventana obligatoria y esperar a que se cierre
+                # antes de abrir el panel del instructor
+                self.actualizar_password_instructor_ventana(
+                    instructor['documento'],
+                    callback=lambda: self.mostrar_panel_instructor_ui(instructor)
+                )
+            else:
+                self.mostrar_panel_instructor_ui(instructor)
             return
         
         # Intentar como APRENDIZ
@@ -427,8 +433,14 @@ class SistemaHSGSCRS:
         self.root.update_idletasks()
     
     def limpiar_pantalla(self):
-        """Mantener por compatibilidad - ya no hace nada"""
-        pass
+        """Destruye todos los widgets del frame admin para evitar superposición entre sesiones"""
+        frame = self.frames.get('admin')
+        if frame:
+            for widget in frame.winfo_children():
+                try:
+                    widget.destroy()
+                except Exception:
+                    pass
     
     def animacion_entrada(self):
         """Inicia la pantalla de intro con animación"""
@@ -463,6 +475,14 @@ class SistemaHSGSCRS:
             self.root.after(10, lambda: self.animar_ciclo(paso + 1))
         
         else:
+            # Destruir label anterior si existe (evita duplicados al re-entrar)
+            if self.lbl_nombre is not None:
+                try:
+                    self.lbl_nombre.destroy()
+                except Exception:
+                    pass
+                self.lbl_nombre = None
+
             # Crear el label del nombre cuando termina la animación del C.R.S
             self.lbl_nombre = ctk.CTkLabel(self.f_intro, text="CHRONOS REGISTRY SYSTEM", 
                                         font=("Segoe UI", 3, "bold"), text_color=self.sena_green)
@@ -587,9 +607,8 @@ class SistemaHSGSCRS:
 
     def mostrar_panel_admin_ui(self):
         """Muestra el panel de administrador usando PantallaAdministrador"""
-        self.show_frame('admin')
         self.limpiar_pantalla()
-        # Delegar construcción a clase especializada (extrae ~120 líneas)
+        self.show_frame('admin')
         PantallaAdministrador(self.frames['admin'], self.db, self.servicio, 
                              self.admin_actual, self)
     def crear_pestana_reportes(self, t_rep):
@@ -677,63 +696,109 @@ class SistemaHSGSCRS:
     
     def mostrar_panel_instructor_ui(self, instructor):
         """Muestra el panel de instructor usando PantallaInstructor"""
-        self.show_frame('admin')  # Reutilizar frame de admin
         self.limpiar_pantalla()
+        self.show_frame('admin')
         from admin_panel import PantallaInstructor
         PantallaInstructor(self.frames['admin'], self.db, self.servicio, 
                           instructor, self)
     
     def mostrar_panel_instructor(self, admin_data):
         """Muestra el panel de instructor cuando accede como admin/instructor"""
-        # Obtener datos del instructor desde la tabla usuarios_admin
-        self.show_frame('admin')
         self.limpiar_pantalla()
+        self.show_frame('admin')
         from admin_panel import PantallaInstructor
         PantallaInstructor(self.frames['admin'], self.db, self.servicio, 
                           admin_data, self)
     
-    def actualizar_password_instructor_ventana(self, documento):
-        """Actualizar contraseña para instructor"""
+    def actualizar_password_instructor_ventana(self, documento, callback=None):
+        """Actualizar contraseña para instructor — OBLIGATORIO, no se puede saltar"""
         ventana = tk.Toplevel(self.root)
-        ventana.title("Actualizar Contraseña")
-        ventana.geometry("400x250")
+        ventana.title("🔒 Cambio de Contraseña Obligatorio")
+        ventana.geometry("420x380")
         ventana.resizable(False, False)
-        
-        ctk.CTkLabel(ventana, text="Actualizar Contraseña de Instructor", 
-                    font=("Segoe UI", 14, "bold")).pack(pady=15)
-        
-        ctk.CTkLabel(ventana, text="Nueva Contraseña:").pack(anchor="w", padx=20, pady=(10, 0))
-        ent_pass = ctk.CTkEntry(ventana, show="*", width=300)
-        ent_pass.pack(padx=20, pady=5)
-        
-        ctk.CTkLabel(ventana, text="Confirmar Contraseña:").pack(anchor="w", padx=20, pady=(10, 0))
-        ent_pass2 = ctk.CTkEntry(ventana, show="*", width=300)
-        ent_pass2.pack(padx=20, pady=5)
-        
+
+        # Bloquear cierre con la X: el instructor NO puede saltarse este paso
+        def bloquear_cierre():
+            messagebox.showwarning(
+                "Obligatorio",
+                "⚠️ Debes cambiar tu contraseña antes de continuar.\n"
+                "No es posible omitir este paso."
+            )
+        ventana.protocol("WM_DELETE_WINDOW", bloquear_cierre)
+
+        # Hacer la ventana modal (bloquea la ventana principal)
+        ventana.grab_set()
+        ventana.focus_force()
+
+        # --- Encabezado ---
+        f_head = ctk.CTkFrame(ventana, fg_color=COLORES['SENA_ORANGE'], corner_radius=0)
+        f_head.pack(fill="x")
+        ctk.CTkLabel(f_head, text="🔒 Cambio de Contraseña",
+                    font=("Segoe UI", 15, "bold"),
+                    text_color="white").pack(pady=14)
+
+        # --- Aviso ---
+        ctk.CTkLabel(ventana,
+                    text="Por seguridad debes establecer una nueva contraseña\nantes de acceder al sistema.",
+                    font=("Segoe UI", 11), text_color="#555",
+                    justify="center").pack(pady=(12, 4))
+
+        # --- Campos ---
+        ctk.CTkLabel(ventana, text="Nueva Contraseña:",
+                    font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=25, pady=(10, 2))
+        ent_pass = ctk.CTkEntry(ventana, show="*", width=360, height=36,
+                                placeholder_text="Mínimo 6 caracteres")
+        ent_pass.pack(padx=25, pady=(0, 6))
+
+        ctk.CTkLabel(ventana, text="Confirmar Contraseña:",
+                    font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=25, pady=(6, 2))
+        ent_pass2 = ctk.CTkEntry(ventana, show="*", width=360, height=36,
+                                 placeholder_text="Repite la contraseña")
+        ent_pass2.pack(padx=25, pady=(0, 6))
+
+        lbl_error = ctk.CTkLabel(ventana, text="", font=("Segoe UI", 10),
+                                 text_color="#E74C3C")
+        lbl_error.pack(pady=(2, 0))
+
         def actualizar():
-            pass1 = ent_pass.get()
-            pass2 = ent_pass2.get()
-            
+            pass1 = ent_pass.get().strip()
+            pass2 = ent_pass2.get().strip()
+
             if not pass1 or not pass2:
-                messagebox.showwarning("Validación", "Ingrese ambas contraseñas")
+                lbl_error.configure(text="⚠️ Ambos campos son obligatorios.")
                 return
-            
+            if len(pass1) < 6:
+                lbl_error.configure(text="⚠️ La contraseña debe tener al menos 6 caracteres.")
+                return
+            if pass1 == "sena123":
+                lbl_error.configure(text="⚠️ No puedes usar la contraseña por defecto.")
+                return
             if pass1 != pass2:
-                messagebox.showwarning("Validación", "Las contraseñas no coinciden")
+                lbl_error.configure(text="⚠️ Las contraseñas no coinciden.")
                 return
-            
+
             try:
                 self.db.cursor.execute(
                     "UPDATE instructores SET password=%s, cambio_pass=1 WHERE documento=%s",
                     (pass1, documento)
                 )
                 self.db.conexion.commit()
-                messagebox.showinfo("Éxito", "✅ Contraseña actualizada")
+                ventana.grab_release()
                 ventana.destroy()
+                messagebox.showinfo("✅ Éxito", "Contraseña actualizada correctamente.\nBienvenido al sistema.")
+                # Abrir el panel del instructor SOLO después de cerrar esta ventana
+                if callback:
+                    callback()
             except Exception as e:
-                messagebox.showerror("Error", f"Error: {str(e)}")
-        
-        ctk.CTkButton(ventana, text="Actualizar", command=actualizar).pack(pady=20, padx=20, fill="x")
+                lbl_error.configure(text=f"Error: {str(e)[:80]}")
+
+        # Permitir confirmar con Enter
+        ent_pass2.bind("<Return>", lambda e: actualizar())
+
+        ctk.CTkButton(ventana, text="✅ Confirmar y Entrar",
+                     fg_color=COLORES['SENA_GREEN'], hover_color="#32900D",
+                     font=("Segoe UI", 13, "bold"), height=42,
+                     command=actualizar).pack(pady=16, padx=25, fill="x")
     
     # ===== MÉTODOS DE CACHÉ para mejorar rendimiento =====
     def obtener_fichas_cached(self):
@@ -764,4 +829,3 @@ if __name__ == "__main__":
     root = ctk.CTk() 
     app = SistemaHSGSCRS(root)
     root.mainloop()
-    

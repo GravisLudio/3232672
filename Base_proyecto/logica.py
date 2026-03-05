@@ -1,4 +1,3 @@
-
 import pandas as pd
 from tkinter import messagebox, filedialog
 import datetime
@@ -366,11 +365,39 @@ class AsistenciaService:
                 total_presencias += presentes
                 total_faltas += faltas
 
+            # Obtener faltas registradas por instructores en el rango
+            query_faltas = """
+                SELECT documento_estudiante, tipo_falta, COUNT(*) as total
+                FROM faltas
+                WHERE fecha_falta BETWEEN %s AND %s
+            """
+            params_faltas = [fecha_inicio, fecha_fin]
+            if lista_ids and modo == "Ficha":
+                fmt = ','.join(['%s'] * len(lista_ids))
+                query_faltas += f" AND id_ficha IN ({fmt})"
+                params_faltas.extend(lista_ids)
+            elif lista_ids and modo == "Aprendiz":
+                fmt = ','.join(['%s'] * len(lista_ids))
+                query_faltas += f" AND documento_estudiante IN ({fmt})"
+                params_faltas.extend(lista_ids)
+            query_faltas += " GROUP BY documento_estudiante, tipo_falta"
+            self.db.cursor.execute(query_faltas, tuple(params_faltas))
+            faltas_registradas_raw = self.db.cursor.fetchall()
+
+            # Acumular totales de faltas e inasistencias del instructor
+            total_faltas_instructor = 0
+            total_retardos_instructor = 0
+            for row in faltas_registradas_raw:
+                if row['tipo_falta'] == 'Retardo':
+                    total_retardos_instructor += row['total']
+                else:
+                    total_faltas_instructor += row['total']
+
             return {
                 'expected': total_sesiones_esperadas,
                 'total_asistencias': total_presencias,
-                'faltas': total_faltas,
-                'retardos': total_retardos,
+                'faltas': total_faltas + total_faltas_instructor,
+                'retardos': total_retardos + total_retardos_instructor,
                 'detalles': asistencias_raw,
                 'fecha_inicio': fecha_inicio,
                 'fecha_fin': fecha_fin
