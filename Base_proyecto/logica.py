@@ -392,9 +392,23 @@ class AsistenciaService:
         query = """SELECT f.id_ficha, f.codigo_ficha, f.nombre_programa, f.jornada
                    FROM fichas f
                    INNER JOIN fichas_asignadas fa ON f.id_ficha = fa.id_ficha
-                   WHERE fa.id_instructor = %s"""
+                   WHERE fa.id_instructor = %s
+                   ORDER BY f.codigo_ficha"""
         self.db.cursor.execute(query, (id_instructor,))
         return self.db.cursor.fetchall()
+
+    # ===== VALIDACIONES =====
+    def validar_instructor_ficha(self, id_instructor, id_ficha):
+        """Verifica que el instructor está asignado a esa ficha"""
+        query = "SELECT 1 FROM fichas_asignadas WHERE id_instructor=%s AND id_ficha=%s LIMIT 1"
+        self.db.cursor.execute(query, (id_instructor, id_ficha))
+        return self.db.cursor.fetchone() is not None
+
+    def validar_estudiante_ficha(self, documento, id_ficha):
+        """Verifica que el estudiante pertenece a esa ficha"""
+        query = "SELECT 1 FROM estudiantes WHERE documento=%s AND id_ficha=%s LIMIT 1"
+        self.db.cursor.execute(query, (documento, id_ficha))
+        return self.db.cursor.fetchone() is not None
 
     def obtener_estudiantes_ficha(self, id_ficha):
         query = """SELECT e.documento, e.nombre_completo, e.correo, e.id_ficha
@@ -405,8 +419,17 @@ class AsistenciaService:
         return self.db.cursor.fetchall()
 
     # ===== FALTAS =====
-    def registrar_falta(self, documento_estudiante, id_ficha, id_competencia, fecha_falta, 
+    def registrar_falta(self, id_instructor, documento_estudiante, id_ficha, id_competencia, fecha_falta, 
                        tipo_falta="Inasistencia", razon="", registrado_por=""):
+        """Registra una falta en el sistema CON VALIDACIONES DE AUTORIZACIÓN"""
+        # VALIDACIÓN 1: Instructor tiene asignada la ficha
+        if not self.validar_instructor_ficha(id_instructor, id_ficha):
+            return False, "❌ No tienes permisos para registrar faltas en esta ficha."
+        
+        # VALIDACIÓN 2: Estudiante pertenece a la ficha
+        if not self.validar_estudiante_ficha(documento_estudiante, id_ficha):
+            return False, "❌ Este estudiante no pertenece a la ficha seleccionada."
+        
         try:
             query = """INSERT INTO faltas 
                       (documento_estudiante, id_ficha, id_competencia, fecha_falta, tipo_falta, razon, registrado_por)

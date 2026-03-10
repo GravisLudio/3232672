@@ -1553,16 +1553,14 @@ class PantallaInstructor:
             return
 
         try:
-            # Parsear fecha
             fecha_str = self.entry_fecha_falta.get()
             fecha_falta = datetime.datetime.strptime(fecha_str, '%d/%m/%Y').date()
 
-            # Obtener documento del estudiante seleccionado
             est_sel = self.combo_faltas_est.get().split(" - ")[0].strip()
 
-            # Usar id_ficha e id_competencia guardados al seleccionar ficha
             id_ficha = getattr(self, '_id_ficha_actual', None)
             id_competencia = getattr(self, '_id_competencia_actual', 33)
+            id_instructor = self.instructor.get('id_instructor', 0)
 
             if not id_ficha:
                 messagebox.showwarning("Validación", "Error al obtener la ficha. Selecciónala de nuevo.")
@@ -1572,13 +1570,12 @@ class PantallaInstructor:
             razon = self.text_razon.get("1.0", "end").strip()
 
             success, msg = self.servicio.registrar_falta(
-                est_sel, id_ficha, id_competencia, fecha_falta, tipo_falta, razon,
+                id_instructor, est_sel, id_ficha, id_competencia, fecha_falta, tipo_falta, razon,
                 self.instructor.get('usuario', 'instructor')
             )
 
             if success:
                 messagebox.showinfo("Éxito", msg)
-                # Recargar tabla inmediatamente sin pasar por el combo
                 self._cargar_faltas_ficha(id_ficha)
                 self.text_razon.delete("1.0", "end")
             else:
