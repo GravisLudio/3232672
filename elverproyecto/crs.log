@@ -1,0 +1,65 @@
+2026-03-02 10:20:19,683 INFO mysql.connector: package: mysql.connector.plugins
+2026-03-02 10:20:19,683 INFO mysql.connector: plugin_name: caching_sha2_password
+2026-03-02 10:20:19,683 INFO mysql.connector: AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2026-03-02 10:20:19,685 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-02 11:15:54,888 INFO mysql.connector: package: mysql.connector.plugins
+2026-03-02 11:15:54,889 INFO mysql.connector: plugin_name: caching_sha2_password
+2026-03-02 11:15:54,889 INFO mysql.connector: AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2026-03-02 11:15:54,890 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-02 15:31:56,246 INFO mysql.connector: package: mysql.connector.plugins
+2026-03-02 15:31:56,247 INFO mysql.connector: plugin_name: caching_sha2_password
+2026-03-02 15:31:56,247 INFO mysql.connector: AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2026-03-02 15:31:56,249 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-02 15:36:23,317 INFO mysql.connector: package: mysql.connector.plugins
+2026-03-02 15:36:23,318 INFO mysql.connector: plugin_name: caching_sha2_password
+2026-03-02 15:36:23,318 INFO mysql.connector: AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2026-03-02 15:36:23,319 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-02 15:39:25,820 INFO mysql.connector: package: mysql.connector.plugins
+2026-03-02 15:39:25,821 INFO mysql.connector: plugin_name: caching_sha2_password
+2026-03-02 15:39:25,821 INFO mysql.connector: AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2026-03-02 15:39:25,823 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 13:40:50,863 ERROR root: Error crítico de conexión HSGS: 2003 (HY000): Can't connect to MySQL server on 'localhost:3306' (10061)
+Traceback (most recent call last):
+  File "C:\Users\Jhoan Diaz\AppData\Local\Programs\Python\Python314\Lib\site-packages\mysql\connector\connection_cext.py", line 354, in _open_connection
+    self._cmysql.connect(**cnx_kwargs)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+_mysql_connector.MySQLInterfaceError: Can't connect to MySQL server on 'localhost:3306' (10061)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Jhoan Diaz\Documents\GitHub\3232672\elverproyecto\conexion.py", line 35, in __init__
+    self.conexion = mysql.connector.connect(
+                    ~~~~~~~~~~~~~~~~~~~~~~~^
+        host=host,
+        ^^^^^^^^^^
+    ...<2 lines>...
+        database=database
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Jhoan Diaz\AppData\Local\Programs\Python\Python314\Lib\site-packages\mysql\connector\pooling.py", line 322, in connect
+    return CMySQLConnection(*args, **kwargs)
+  File "C:\Users\Jhoan Diaz\AppData\Local\Programs\Python\Python314\Lib\site-packages\mysql\connector\connection_cext.py", line 142, in __init__
+    self.connect(**kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\Jhoan Diaz\AppData\Local\Programs\Python\Python314\Lib\site-packages\mysql\connector\abstracts.py", line 1604, in connect
+    self._open_connection()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Jhoan Diaz\AppData\Local\Programs\Python\Python314\Lib\site-packages\mysql\connector\connection_cext.py", line 360, in _open_connection
+    raise get_mysql_exception(
+        err.errno, msg=err.msg, sqlstate=err.sqlstate
+    ) from err
+mysql.connector.errors.DatabaseError: 2003 (HY000): Can't connect to MySQL server on 'localhost:3306' (10061)
+2026-03-04 13:43:19,629 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 13:49:44,913 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 13:58:16,235 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 14:17:26,638 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 14:18:45,450 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 14:20:01,833 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 14:21:16,752 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 14:23:16,265 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 14:27:37,555 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 14:28:05,602 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 14:28:32,319 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-04 17:09:32,432 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
