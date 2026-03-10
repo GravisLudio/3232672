@@ -16,7 +16,7 @@ from validadores import Validador
 from reportes import ReportesManager
 from dashboard_password import DashboardManager, PasswordManager, CalendarioPersonalizado
 
-# helper tooltip class for UI hints
+# ===== UTILIDADES DE INTERFAZ =====
 class ToolTip:
     def __init__(self, widget, text):
         self.widget = widget
@@ -47,11 +47,9 @@ from logica import AsistenciaService
 ctk.set_appearance_mode("light") 
 ctk.set_default_color_theme("green")
 
-# Configurar logging centralizado
 configure_logging()
 
-
-
+# ===== SISTEMA PRINCIPAL =====
 class SistemaHSGSCRS:
     def __init__(self, root):
         self.root = root
@@ -104,19 +102,26 @@ class SistemaHSGSCRS:
         self._construir_pantalla_inicio()
         self._construir_pantalla_terminal()
         self._construir_pantalla_login()
-        # aprendiz y admin se construyen dinámicamente (varían según el usuario)
 
         self.root.withdraw() 
         self.root.after(100, self.lanzar_sistema)
         
+    # ===== INICIALIZACIÓN Y VENTANA =====
     def lanzar_sistema(self):
         self.root.deiconify() 
         self.root.state('zoomed')
-        self.root.resizable(False, False)
+        self.root.resizable(True, True)
+        # Ajustar después de renderizar para respetar barra de tareas
+        self.root.after(100, self._ajustar_ventana_maximizada)
         self.animacion_entrada()
     
-    # ===== MÉTODOS CONSTRUCTORES DE PANTALLAS =====
+    def _ajustar_ventana_maximizada(self):
+        """Ajusta la ventana maximizada para no tapar la barra de tareas de Windows"""
+        ancho = self.root.winfo_width()
+        alto = self.root.winfo_height() - 50  # Restar espacio de barra de tareas
+        self.root.geometry(f'{ancho}x{alto}+0+0')
     
+    # ===== GUI - PANTALLA INTRO =====
     def _construir_pantalla_intro(self):
         """Construye la pantalla de intro con animación"""
         frame = self.frames['intro']
@@ -127,6 +132,7 @@ class SistemaHSGSCRS:
         self.lbl_nombre = None  # Se creará dinámicamente
         self.size_actual = 10
     
+    # ===== GUI - PANTALLA INICIO =====
     def _construir_pantalla_inicio(self):
         """Construye la pantalla de inicio con botones"""
         frame = self.frames['inicio']
@@ -186,6 +192,7 @@ class SistemaHSGSCRS:
         btn_salir.pack(pady=15)
         ToolTip(btn_salir, "Cerrar la aplicación")
     
+    # ===== GUI - PANTALLA TERMINAL (ASISTENCIA) =====
     def _construir_pantalla_terminal(self):
         """Construye la pantalla de registro de asistencia"""
         frame = self.frames['terminal']
@@ -265,6 +272,7 @@ class SistemaHSGSCRS:
             self.ent_doc_terminal.delete(0, tk.END)
             self.ent_doc_terminal.focus()
     
+    # ===== GUI - PANTALLA LOGIN =====
     def _construir_pantalla_login(self):
         """Construye pantalla de login con diseño moderno dos columnas"""
         frame = self.frames['login']
@@ -357,6 +365,7 @@ class SistemaHSGSCRS:
                      hover_color="#D0D0D0",
                      command=self.mostrar_inicio).pack(fill="x")
     
+    # ===== PROCESAMIENTO DE LOGIN =====
     def _procesar_login(self):
         """Procesa el login unificado (Admin, Instructor o Aprendiz)"""
         usuario = self.ent_usuario.get().strip()
@@ -423,6 +432,7 @@ class SistemaHSGSCRS:
         self.ent_pass.delete(0, tk.END)
         self.ent_usuario.focus()
     
+    # ===== NAVEGACIÓN =====
     def show_frame(self, nombre_frame):
         """Muestra un frame y oculta los demás (instantáneo)"""
         for frame in self.frames.values():
@@ -443,6 +453,7 @@ class SistemaHSGSCRS:
                     except Exception:
                         pass
     
+    # ===== ANIMACIONES =====
     def animacion_entrada(self):
         """Inicia la pantalla de intro con animación"""
         self.show_frame('intro')
@@ -499,8 +510,7 @@ class SistemaHSGSCRS:
         else:
             self.root.after(2000, self.mostrar_terminal)
 
-
-    
+    # ===== VISTAS - NAVEGACIÓN GENERAL =====
     def mostrar_inicio(self):
         """Muestra la pantalla de inicio"""
         self.show_frame('inicio')
@@ -520,6 +530,7 @@ class SistemaHSGSCRS:
 
 
     def mostrar_panel_aprendiz(self, user):
+        # ===== VISTA APRENDIZ =====
         self.show_frame('aprendiz')
         self.limpiar_pantalla()
         # header colorido para aprendiz
@@ -605,13 +616,15 @@ class SistemaHSGSCRS:
         self.cal.bind("<<CalendarSelected>>", actualizar_cards)
         actualizar_cards()
 
-
+    # ===== VISTA ADMINISTRADOR =====
     def mostrar_panel_admin_ui(self):
         """Muestra el panel de administrador usando PantallaAdministrador"""
         self.limpiar_pantalla()
         self.show_frame('admin')
         PantallaAdministrador(self.frames['admin'], self.db, self.servicio, 
                              self.admin_actual, self)
+    
+    # ===== REPORTES Y EXPORTACIÓN =====
     def crear_pestana_reportes(self, t_rep):
         """Delegar construcción de pestaña de reportes al gestor especializado"""
         self.reportes_manager.crear_pestana_reportes(t_rep)
@@ -684,17 +697,12 @@ class SistemaHSGSCRS:
         """Delegar a DashboardManager"""
         self.dashboard_manager.mostrar_dashboard()
 
-
-        
-
-
-
-
-        
+    # ===== CAMBIO DE CONTRASEÑA =====        
     def actualizar_password_ventana(self, documento):
         """Delegar a PasswordManager"""
         self.password_manager.actualizar_password_ventana(documento)
     
+    # ===== VISTA INSTRUCTOR =====
     def mostrar_panel_instructor_ui(self, instructor):
         """Muestra el panel de instructor usando PantallaInstructor"""
         self.limpiar_pantalla()
@@ -801,7 +809,7 @@ class SistemaHSGSCRS:
                      font=("Segoe UI", 13, "bold"), height=42,
                      command=actualizar).pack(pady=16, padx=25, fill="x")
     
-    # ===== MÉTODOS DE CACHÉ para mejorar rendimiento =====
+    # ===== CACHÉ Y RENDIMIENTO =====
     def obtener_fichas_cached(self):
         """Retorna fichas con caché (TTL: 1 hora)"""
         import time

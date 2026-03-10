@@ -3,29 +3,22 @@ from tkinter import messagebox, filedialog
 import datetime
 import logging
 
+# ===== SERVICIO DE ASISTENCIA =====
 class AsistenciaService:
     def __init__(self, db_conexion):
-        
-       
         self.db = db_conexion
 
+    # ===== UTILIDADES INTERNAS =====
     def _calcular_dias_habiles(self, fecha_inicio, fecha_fin):
-        """Calcula número de días hábiles (lunes-viernes) entre dos fechas (inclusive)."""
         count = 0
         current = fecha_inicio
         while current <= fecha_fin:
-            # 0=lunes, 4=viernes, 5=sábado, 6=domingo
             if current.weekday() < 5:
                 count += 1
             current += datetime.timedelta(days=1)
         return count
 
     def _calcular_sesiones_esperadas(self, horas_totales, fecha_inicio_ficha, fecha_hasta, fecha_desde_rango=None):
-        """
-        Calcula el número de sesiones esperadas (de 6 horas).
-        Si la ficha no tiene fecha_inicio, usa el inicio del rango analizado.
-        """
-        # Si la ficha no tiene fecha de inicio, usar el inicio del rango
         if not fecha_inicio_ficha:
             fecha_inicio_ficha = fecha_desde_rango
         if not fecha_inicio_ficha or fecha_inicio_ficha > fecha_hasta:
@@ -34,7 +27,7 @@ class AsistenciaService:
         sesiones_por_horas = horas_totales / 6
         return min(dias, int(sesiones_por_horas))
 
-  
+    # ===== REGISTRO DE ASISTENCIA =====
     def registrar_entrada(self, documento):
         
         if not documento:
@@ -42,13 +35,11 @@ class AsistenciaService:
         
         self.db.cursor.execute("SELECT documento FROM estudiantes WHERE documento=%s", (documento,))
         if not self.db.cursor.fetchone():
-            
             self.db.cursor.execute("SELECT documento FROM estudiantes_eliminados WHERE documento=%s", (documento,))
             if self.db.cursor.fetchone():
                 return False, "El aprendiz está en la PAPELERA. Contacte al administrador."
             return False, "El aprendiz NO existe en el sistema."
 
-        
         self.db.cursor.execute("SELECT id_asistencia FROM asistencias WHERE documento_estudiante=%s AND fecha_salida IS NULL", (documento,))
         if self.db.cursor.fetchone():
             return False, "⚠️ Ya tienes una entrada activa. Debes registrar SALIDA primero."
@@ -58,7 +49,6 @@ class AsistenciaService:
         return False, "❌ Error técnico al conectar con la base de datos."
 
     def registrar_salida(self, documento):
-       
         if not documento:
             return False, "Por favor ingrese un documento."
 
@@ -75,16 +65,13 @@ class AsistenciaService:
         else:
             return False, "❌ No tienes una entrada pendiente para cerrar."
 
-
-    
+    # ===== AUTENTICACIÓN =====
     def login_aprendiz(self, documento, password):
-       
         q = "SELECT * FROM estudiantes WHERE documento=%s AND password=%s"
         self.db.cursor.execute(q, (documento, password))
         return self.db.cursor.fetchone()
 
     def actualizar_password(self, documento, nueva_pass):
-        
         if len(nueva_pass) < 4:
             return False, "La contraseña debe tener al menos 4 caracteres."
         try:
@@ -101,6 +88,7 @@ class AsistenciaService:
             "SELECT id_ficha, codigo_ficha, nombre_programa, jornada FROM fichas ORDER BY codigo_ficha")
         return self.db.cursor.fetchall()
 
+    # ===== GESTIÓN DE APRENDICES =====
     def guardar_aprendiz_manual(self, datos, id_ficha):
 
         documento = datos.get("Documento", "").strip()
@@ -121,14 +109,12 @@ class AsistenciaService:
             )
             self.db.conexion.commit()
             return True, "✅ Aprendiz guardado en el sistema."
-        
         except Exception as e:
             if "Duplicate entry" in str(e) or "1062" in str(e):
                 return False, f"❌ El documento {datos['Documento']} ya se encuentra registrado."
             return False, f"❌ Error al guardar: {str(e)}"
 
     def importar_excel(self):
-       
         path = filedialog.askopenfilename(filetypes=[("Excel", "*.xlsx"), ("CSV", "*.csv")])
         if path:
             try:
@@ -149,8 +135,8 @@ class AsistenciaService:
                 return False
         return False
 
+    # ===== GESTIÓN DE PAPELERA =====
     def mandar_a_papelera(self, documento):
-        
         try:
             self.db.cursor.execute(
                 "INSERT INTO estudiantes_eliminados (documento, nombre_completo, correo, id_ficha) "
@@ -165,7 +151,6 @@ class AsistenciaService:
             return False
 
     def restaurar_aprendiz(self, documento):
-       
         try:
             self.db.cursor.execute(
                 "INSERT INTO estudiantes (documento, nombre_completo, correo, id_ficha) "
@@ -180,7 +165,6 @@ class AsistenciaService:
             return False
 
     def eliminar_permanente(self, documento):
-        
         try:
             self.db.cursor.execute("DELETE FROM estudiantes_eliminados WHERE documento=%s", (documento,))
             self.db.conexion.commit()
@@ -189,16 +173,13 @@ class AsistenciaService:
             logging.error(f"Error al eliminar permanentemente {documento}: {ex}", exc_info=True)
             return False
 
+    # ===== REGISTROS DE APRENDIZ =====
     def obtener_registros_dia(self, documento, fecha):
-        
         query = "SELECT * FROM asistencias WHERE documento_estudiante = %s AND DATE(fecha_registro) = %s"
         self.db.cursor.execute(query, (documento, fecha))
         return self.db.cursor.fetchall()
 
     def obtener_registros_mes(self, documento, fecha_inicio, fecha_fin):
-        """Obtiene todos los registros de asistencia en un rango de fechas para un usuario.
-        Devuelve lista de dicts con 'fecha_registro', 'fecha_salida', etc.
-        """
         query = """SELECT * FROM asistencias 
                    WHERE documento_estudiante = %s 
                    AND DATE(fecha_registro) >= %s 
@@ -207,15 +188,8 @@ class AsistenciaService:
         self.db.cursor.execute(query, (documento, fecha_inicio, fecha_fin))
         return self.db.cursor.fetchall()
 
-    
+    # ===== MÉTRICAS Y REPORTES =====
     def obtener_metricas_reporte_multiple(self, lista_ids, modo, rango, fecha_inicio=None):
-        """
-        Calcula métricas de asistencia con base en:
-        - Sesiones esperadas = días hábiles * horas_competencia / 6
-        - Asistencia = estudiante registró entrada
-        - Falta = sesión esperada sin entrada
-        - Retardo = entrada después de hora teórica
-        """
         try:
             # Normalizar fecha_inicio
             if fecha_inicio:
@@ -408,16 +382,13 @@ class AsistenciaService:
             logging.exception(f"Error en obtener_metricas_reporte_multiple: {e}")
             return {'expected': 0, 'total_asistencias': 0, 'faltas': 0, 'retardos': 0, 'detalles': [], 'fecha_inicio': None, 'fecha_fin': None}
 
-    # ===== MÉTODOS PARA INSTRUCTORES =====
-
+    # ===== INSTRUCTORES =====
     def login_instructor(self, usuario, password):
-        """Autentica un instructor con usuario y contraseña"""
         q = "SELECT * FROM instructores WHERE usuario=%s AND password=%s"
         self.db.cursor.execute(q, (usuario, password))
         return self.db.cursor.fetchone()
 
     def obtener_fichas_instructor(self, id_instructor):
-        """Obtiene las fichas asignadas a un instructor"""
         query = """SELECT f.id_ficha, f.codigo_ficha, f.nombre_programa, f.jornada
                    FROM fichas f
                    INNER JOIN fichas_asignadas fa ON f.id_ficha = fa.id_ficha
@@ -426,7 +397,6 @@ class AsistenciaService:
         return self.db.cursor.fetchall()
 
     def obtener_estudiantes_ficha(self, id_ficha):
-        """Obtiene todos los estudiantes de una ficha"""
         query = """SELECT e.documento, e.nombre_completo, e.correo, e.id_ficha
                    FROM estudiantes e
                    WHERE e.id_ficha = %s
@@ -434,9 +404,9 @@ class AsistenciaService:
         self.db.cursor.execute(query, (id_ficha,))
         return self.db.cursor.fetchall()
 
+    # ===== FALTAS =====
     def registrar_falta(self, documento_estudiante, id_ficha, id_competencia, fecha_falta, 
                        tipo_falta="Inasistencia", razon="", registrado_por=""):
-        """Registra una falta en el sistema"""
         try:
             query = """INSERT INTO faltas 
                       (documento_estudiante, id_ficha, id_competencia, fecha_falta, tipo_falta, razon, registrado_por)
@@ -456,7 +426,6 @@ class AsistenciaService:
             return False, f"❌ Error: {str(e)[:100]}"
 
     def eliminar_falta(self, id_falta):
-        """Elimina un registro de falta"""
         try:
             self.db.cursor.execute("DELETE FROM faltas WHERE id_falta = %s", (id_falta,))
             self.db.conexion.commit()
@@ -466,7 +435,6 @@ class AsistenciaService:
             return False
 
     def obtener_faltas_ficha(self, id_ficha, fecha_inicio=None, fecha_fin=None):
-        """Obtiene faltas de una ficha. Sin rango = todas las registradas."""
         if fecha_inicio and fecha_fin:
             query = """SELECT f.*, e.nombre_completo, c.nombre_competencia
                        FROM faltas f
@@ -477,7 +445,6 @@ class AsistenciaService:
                        ORDER BY f.fecha_falta DESC"""
             self.db.cursor.execute(query, (id_ficha, fecha_inicio, fecha_fin))
         else:
-            # Sin filtro de fecha: traer todas las faltas de la ficha
             query = """SELECT f.*, e.nombre_completo, c.nombre_competencia
                        FROM faltas f
                        INNER JOIN estudiantes e ON f.documento_estudiante = e.documento
@@ -488,7 +455,6 @@ class AsistenciaService:
         return self.db.cursor.fetchall()
 
     def obtener_faltas_estudiante(self, documento_estudiante, id_ficha=None):
-        """Obtiene todas las faltas de un estudiante"""
         if id_ficha:
             query = """SELECT * FROM faltas WHERE documento_estudiante = %s AND id_ficha = %s
                        ORDER BY fecha_falta DESC"""

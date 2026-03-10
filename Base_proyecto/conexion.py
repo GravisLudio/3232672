@@ -6,23 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# ===== CONEXIÓN A BASE DE DATOS =====
 class InventarioDB:
-    """Encapsula la conexión y las operaciones básicas contra MySQL.
-
-    Esta clase se utiliza en toda la aplicación CRS para realizar inserciones,
-    consultas, eliminaciones, cálculos de horas y, ahora, auditoría de acciones
-    administrativas. Al centralizar el acceso a la base de datos evitamos
-    dispersión de sentencias SQL y facilitamos la prueba unitaria.
-
-    Convenciones de la clase:
-    - Cada método comprueba `self.conexion` antes de ejecutar cualquier
-      sentencia. Si la conexión es `None` simplemente retorna un valor
-      neutro (False o lista vacía) para evitar excepciones en cascada.
-    - Los errores se imprimen en consola; la capa de lógica puede reaccionar
-      según el valor de retorno (True/False o lista).
-    - Los métodos actuales cubren: asistencias, búsquedas, borrado y reporte
-      de horas. Se añade un método para registrar eventos de auditoría.
-    """
 
     def __init__(self):
         """Establece la conexión con la base de datos TechSenaHSGS de HSGS."""
@@ -47,7 +32,6 @@ class InventarioDB:
             self.conexion = None
 
     def insertar(self, documento, id_competencia, observaciones=""):
-        """Registra una nueva entrada de aprendiz en la tabla asistencias."""
         if not self.conexion: return False
         try:
             query = """INSERT INTO asistencias (documento_estudiante, id_competencia, observaciones) 
@@ -59,11 +43,10 @@ class InventarioDB:
             print(f"Error al registrar asistencia: {e}")
             return False
 
+    # ===== CONSULTAS GENERALES =====
     def consultar_todos(self):
-        """Retorna el historial completo de ingresos para el panel principal."""
         if not self.conexion: return []
         try:
-            # Consulta que ordena por los registros más recientes
             self.cursor.execute("SELECT * FROM asistencias ORDER BY fecha_registro DESC")
             return self.cursor.fetchall()
         except Error as e:
@@ -71,7 +54,6 @@ class InventarioDB:
             return []
 
     def buscar_por_referencia(self, documento):
-        """Busca todas las entradas registradas de un aprendiz específico."""
         if not self.conexion: return []
         try:
             query = "SELECT * FROM asistencias WHERE documento_estudiante = %s"
@@ -82,7 +64,6 @@ class InventarioDB:
             return []
 
     def eliminar(self, id_asistencia):
-        """Elimina un registro de asistencia por su ID único."""
         if not self.conexion: return False
         try:
             query = "DELETE FROM asistencias WHERE id_asistencia = %s"
@@ -94,19 +75,16 @@ class InventarioDB:
             return False
 
     def cerrar_conexion(self):
-        """Finaliza de forma segura la sesión con el servidor."""
         if self.conexion and self.conexion.is_connected():
             self.cursor.close()
             self.conexion.close()
             print("Sesión HSGS finalizada correctamente.")
 
-    # -------------------- NUEVA FUNCIONALIDAD: AUDITORÍA --------------------
+    # ===== AUDITORÍA =====
     def registrar_auditoria(self, usuario, accion, objeto="", detalles=""):
-        """Guarda un registro de auditoría en la tabla `auditoria`."""
         if not self.conexion or not self.conexion.is_connected():
             return False
         try:
-            # Quitamos el 'CREATE TABLE IF NOT EXISTS' de aquí para que sea más rápido
             query = ("INSERT INTO auditoria (usuario, accion, objeto, detalles) "
                      "VALUES (%s, %s, %s, %s)")
             self.cursor.execute(query, (usuario, accion, objeto, detalles))
@@ -116,11 +94,10 @@ class InventarioDB:
             print(f"Error al registrar auditoría: {e}")
             return False
 
+    # ===== REPORTES =====
     def obtener_reporte_horas(self, documento):
-        """Calcula el total de horas acumuladas por aprendiz."""
         if not self.conexion: return []
         try:
-            # Calcula la diferencia en horas entre entrada y salida
             query = """
                 SELECT 
                     DATE(fecha_registro) as fecha,

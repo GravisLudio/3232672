@@ -10,8 +10,7 @@ import logging
 import datetime
 import calendar as _cal
 
-
-# Configurar estilo de ttk
+# ===== ESTILOS PARA TABLAS =====
 def configurar_estilo_tablas():
     """Configura el estilo de las tablas (Treeview)"""
     style = ttk.Style()
@@ -31,7 +30,7 @@ def configurar_estilo_tablas():
 
 
 class PantallaAdministrador:
-    """Gestiona toda la pantalla de administrador con diseño profesional."""
+    # ===== ADMINISTRADOR INTERFACE =====
     
     def __init__(self, frame_admin, db, servicio, admin_usuario, app):
         self.frame = frame_admin

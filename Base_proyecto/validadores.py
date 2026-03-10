@@ -1,12 +1,7 @@
-"""
-Validaciones centralizadas para C.R.S
-Reutilizar estas funciones en lugar de esparcir validaciones
-"""
 import re
 
-
+# ===== VALIDACIONES =====
 class Validador:
-    """Clase centralizada de validaciones"""
     
     @staticmethod
     def validar_documento(documento):
