@@ -394,10 +394,16 @@ class SistemaHSGSCRS:
                 self.db.registrar_auditoria(self.instructor_actual, "login instructor")
             except Exception as ex:
                 logging.error("Error registrando auditoría (login instructor)", exc_info=True)
-            
+
             if instructor.get('cambio_pass') == 0 or password == 'sena123':
-                self.actualizar_password_instructor_ventana(instructor['documento'])
-            self.mostrar_panel_instructor_ui(instructor)
+                # Mostrar ventana obligatoria y esperar a que se cierre
+                # antes de abrir el panel del instructor
+                self.actualizar_password_instructor_ventana(
+                    instructor['documento'],
+                    callback=lambda: self.mostrar_panel_instructor_ui(instructor)
+                )
+            else:
+                self.mostrar_panel_instructor_ui(instructor)
             return
         
         # Intentar como APRENDIZ
@@ -427,8 +433,15 @@ class SistemaHSGSCRS:
         self.root.update_idletasks()
     
     def limpiar_pantalla(self):
-        """Mantener por compatibilidad - ya no hace nada"""
-        pass
+        """Destruye todos los widgets de los frames admin y aprendiz para evitar superposición entre sesiones"""
+        for nombre_frame in ['admin', 'aprendiz']:
+            frame = self.frames.get(nombre_frame)
+            if frame:
+                for widget in frame.winfo_children():
+                    try:
+                        widget.destroy()
+                    except Exception:
+                        pass
     
     def animacion_entrada(self):
         """Inicia la pantalla de intro con animación"""
@@ -463,6 +476,14 @@ class SistemaHSGSCRS:
             self.root.after(10, lambda: self.animar_ciclo(paso + 1))
         
         else:
+            # Destruir label anterior si existe (evita duplicados al re-entrar)
+            if self.lbl_nombre is not None:
+                try:
+                    self.lbl_nombre.destroy()
+                except Exception:
+                    pass
+                self.lbl_nombre = None
+
             # Crear el label del nombre cuando termina la animación del C.R.S
             self.lbl_nombre = ctk.CTkLabel(self.f_intro, text="CHRONOS REGISTRY SYSTEM", 
                                         font=("Segoe UI", 3, "bold"), text_color=self.sena_green)
@@ -587,9 +608,8 @@ class SistemaHSGSCRS:
 
     def mostrar_panel_admin_ui(self):
         """Muestra el panel de administrador usando PantallaAdministrador"""
-        self.show_frame('admin')
         self.limpiar_pantalla()
-        # Delegar construcción a clase especializada (extrae ~120 líneas)
+        self.show_frame('admin')
         PantallaAdministrador(self.frames['admin'], self.db, self.servicio, 
                              self.admin_actual, self)
     def crear_pestana_reportes(self, t_rep):
@@ -677,22 +697,21 @@ class SistemaHSGSCRS:
     
     def mostrar_panel_instructor_ui(self, instructor):
         """Muestra el panel de instructor usando PantallaInstructor"""
-        self.show_frame('admin')  # Reutilizar frame de admin
         self.limpiar_pantalla()
+        self.show_frame('admin')
         from admin_panel import PantallaInstructor
         PantallaInstructor(self.frames['admin'], self.db, self.servicio, 
                           instructor, self)
     
     def mostrar_panel_instructor(self, admin_data):
         """Muestra el panel de instructor cuando accede como admin/instructor"""
-        # Obtener datos del instructor desde la tabla usuarios_admin
-        self.show_frame('admin')
         self.limpiar_pantalla()
+        self.show_frame('admin')
         from admin_panel import PantallaInstructor
         PantallaInstructor(self.frames['admin'], self.db, self.servicio, 
                           admin_data, self)
     
-    def actualizar_password_instructor_ventana(self, documento):
+    def actualizar_password_instructor_ventana(self, documento, callback=None):
         """Actualizar contraseña para instructor — OBLIGATORIO, no se puede saltar"""
         ventana = tk.Toplevel(self.root)
         ventana.title("🔒 Cambio de Contraseña Obligatorio")
@@ -768,6 +787,9 @@ class SistemaHSGSCRS:
                 ventana.grab_release()
                 ventana.destroy()
                 messagebox.showinfo("✅ Éxito", "Contraseña actualizada correctamente.\nBienvenido al sistema.")
+                # Abrir el panel del instructor SOLO después de cerrar esta ventana
+                if callback:
+                    callback()
             except Exception as e:
                 lbl_error.configure(text=f"Error: {str(e)[:80]}")
 
