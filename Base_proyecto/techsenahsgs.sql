@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 02-03-2026 a las 07:08:38
+-- Tiempo de generación: 05-03-2026 a las 18:36:40
 -- Versión del servidor: 9.1.0
 -- Versión de PHP: 8.3.14
 
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS `auditoria` (
   `detalles` text CHARACTER SET utf8mb3 COLLATE utf8mb3_spanish2_ci,
   `fecha` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=82 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_spanish2_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=85 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_spanish2_ci;
 
 --
 -- Volcado de datos para la tabla `auditoria`
@@ -153,7 +153,10 @@ INSERT INTO `auditoria` (`id`, `usuario`, `accion`, `objeto`, `detalles`, `fecha
 (78, 'admin', 'login admin', '', '', '2026-03-01 23:58:52'),
 (79, 'admin', 'login admin', '', '', '2026-03-02 00:48:21'),
 (80, 'admin', 'login admin', '', '', '2026-03-02 00:52:19'),
-(81, 'admin', 'login admin', '', '', '2026-03-02 02:07:48');
+(81, 'admin', 'login admin', '', '', '2026-03-02 02:07:48'),
+(82, '1010101', 'login aprendiz', '', '', '2026-03-05 13:24:37'),
+(83, '1010101', 'logout aprendiz', '', '', '2026-03-05 13:25:35'),
+(84, 'ADMIN', 'login ', '', '', '2026-03-05 13:25:44');
 
 -- --------------------------------------------------------
 
@@ -211,7 +214,7 @@ CREATE TABLE IF NOT EXISTS `estudiantes` (
 --
 
 INSERT INTO `estudiantes` (`id_estudiante`, `documento`, `nombre_completo`, `correo`, `password`, `id_ficha`, `cambio_pass`) VALUES
-(11, '1010101', 'Gravis Ludio', 'gravis@sena.edu.co', 'pass123', 5, 0),
+(11, '1010101', 'Gravis Ludio', 'gravis@sena.edu.co', '2808zXvc', 5, 1),
 (12, '1010102', 'Hidden Sage', 'hidden@sena.edu.co', 'pass123', 5, 0),
 (13, '1010103', 'Carlos Mario', 'carlos@sena.edu.co', 'pass123', 5, 0),
 (14, '1010104', 'Ana Maria', 'ana@sena.edu.co', 'pass123', 5, 0),
@@ -233,6 +236,30 @@ CREATE TABLE IF NOT EXISTS `estudiantes_eliminados` (
   `id_ficha` int DEFAULT NULL,
   `fecha_eliminacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`documento`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `faltas`
+--
+
+DROP TABLE IF EXISTS `faltas`;
+CREATE TABLE IF NOT EXISTS `faltas` (
+  `id_falta` int NOT NULL AUTO_INCREMENT,
+  `documento_estudiante` varchar(20) NOT NULL,
+  `id_ficha` int NOT NULL,
+  `id_competencia` int NOT NULL,
+  `fecha_falta` date NOT NULL,
+  `tipo_falta` enum('Inasistencia','Retardo','Justificada') DEFAULT 'Inasistencia',
+  `razon` text,
+  `registrado_por` varchar(50) NOT NULL,
+  `fecha_registro` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_falta`),
+  UNIQUE KEY `unique_falta_dia` (`documento_estudiante`,`fecha_falta`,`id_competencia`),
+  KEY `fk_falta_estudiante` (`documento_estudiante`),
+  KEY `fk_falta_ficha` (`id_ficha`),
+  KEY `fk_falta_competencia` (`id_competencia`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -262,6 +289,24 @@ INSERT INTO `fichas` (`id_ficha`, `codigo_ficha`, `nombre_programa`, `jornada`, 
 (7, '2670103', 'Programación de Software', 'Mañana', NULL),
 (8, '2680201', 'Desarrollo de Aplicaciones Móviles', 'Noche', NULL),
 (9, '2680202', 'Análisis y Desarrollo de Software', 'Mañana', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `fichas_asignadas`
+--
+
+DROP TABLE IF EXISTS `fichas_asignadas`;
+CREATE TABLE IF NOT EXISTS `fichas_asignadas` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `id_instructor` int NOT NULL,
+  `id_ficha` int NOT NULL,
+  `fecha_asignacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_instructor_ficha` (`id_instructor`,`id_ficha`),
+  KEY `fk_ficha_asignada_instructor` (`id_instructor`),
+  KEY `fk_ficha_asignada_ficha` (`id_ficha`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -345,6 +390,28 @@ INSERT INTO `horarios` (`id_horario`, `id_competencia`, `dia_semana`, `hora_inic
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `instructores`
+--
+
+DROP TABLE IF EXISTS `instructores`;
+CREATE TABLE IF NOT EXISTS `instructores` (
+  `id_instructor` int NOT NULL AUTO_INCREMENT,
+  `documento` varchar(20) NOT NULL,
+  `nombre_completo` varchar(150) NOT NULL,
+  `correo` varchar(100) DEFAULT NULL,
+  `especialidad` varchar(150) DEFAULT NULL,
+  `usuario` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL DEFAULT 'sena123',
+  `cambio_pass` tinyint(1) DEFAULT '0',
+  `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_instructor`),
+  UNIQUE KEY `documento` (`documento`),
+  UNIQUE KEY `usuario` (`usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `usuarios_admin`
 --
 
@@ -366,108 +433,24 @@ CREATE TABLE IF NOT EXISTS `usuarios_admin` (
 INSERT INTO `usuarios_admin` (`id_admin`, `usuario`, `password`, `nombre`, `tipo_usuario`) VALUES
 (1, 'admin', 'admin123', 'Administrador HSGS', 'admin');
 
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `instructores`
---
-
-DROP TABLE IF EXISTS `instructores`;
-CREATE TABLE IF NOT EXISTS `instructores` (
-  `id_instructor` int NOT NULL AUTO_INCREMENT,
-  `documento` varchar(20) NOT NULL UNIQUE,
-  `nombre_completo` varchar(150) NOT NULL,
-  `correo` varchar(100) DEFAULT NULL,
-  `especialidad` varchar(150) DEFAULT NULL,
-  `usuario` varchar(50) NOT NULL,
-  `password` varchar(255) NOT NULL DEFAULT 'sena123',
-  `cambio_pass` tinyint(1) DEFAULT '0',
-  `fecha_creacion` timestamp DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id_instructor`),
-  UNIQUE KEY `documento` (`documento`),
-  UNIQUE KEY `usuario` (`usuario`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `fichas_asignadas`
---
-
-DROP TABLE IF EXISTS `fichas_asignadas`;
-CREATE TABLE IF NOT EXISTS `fichas_asignadas` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `id_instructor` int NOT NULL,
-  `id_ficha` int NOT NULL,
-  `fecha_asignacion` timestamp DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_instructor_ficha` (`id_instructor`, `id_ficha`),
-  KEY `fk_ficha_asignada_instructor` (`id_instructor`),
-  KEY `fk_ficha_asignada_ficha` (`id_ficha`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `faltas`
---
-
-DROP TABLE IF EXISTS `faltas`;
-CREATE TABLE IF NOT EXISTS `faltas` (
-  `id_falta` int NOT NULL AUTO_INCREMENT,
-  `documento_estudiante` varchar(20) NOT NULL,
-  `id_ficha` int NOT NULL,
-  `id_competencia` int NOT NULL,
-  `fecha_falta` date NOT NULL,
-  `tipo_falta` enum('Inasistencia','Retardo','Justificada') DEFAULT 'Inasistencia',
-  `razon` text,
-  `registrado_por` varchar(50) NOT NULL,
-  `fecha_registro` timestamp DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id_falta`),
-  KEY `fk_falta_estudiante` (`documento_estudiante`),
-  KEY `fk_falta_ficha` (`id_ficha`),
-  KEY `fk_falta_competencia` (`id_competencia`),
-  UNIQUE KEY `unique_falta_dia` (`documento_estudiante`, `fecha_falta`, `id_competencia`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
 --
 -- Restricciones para tablas volcadas
 --
 
 --
--- Filtros para la tabla `estudiantes`
+-- Filtros para la tabla `faltas`
 --
-ALTER TABLE `estudiantes`
-  ADD CONSTRAINT `fk_estudiante_ficha` FOREIGN KEY (`id_ficha`) REFERENCES `fichas` (`id_ficha`) ON DELETE SET NULL;
-
---
--- Filtros para la tabla `ficha_competencias`
---
-ALTER TABLE `ficha_competencias`
-  ADD CONSTRAINT `fk_ficha_comp_comp` FOREIGN KEY (`id_competencia`) REFERENCES `competencias` (`id_competencia`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_ficha_comp_ficha` FOREIGN KEY (`id_ficha`) REFERENCES `fichas` (`id_ficha`) ON DELETE CASCADE;
-
---
--- Filtros para la tabla `horarios`
---
-ALTER TABLE `horarios`
-  ADD CONSTRAINT `horarios_ibfk_2` FOREIGN KEY (`id_competencia`) REFERENCES `competencias` (`id_competencia`) ON DELETE CASCADE,
-  ADD CONSTRAINT `horarios_ibfk_3` FOREIGN KEY (`id_ficha`) REFERENCES `fichas` (`id_ficha`);
+ALTER TABLE `faltas`
+  ADD CONSTRAINT `fk_falta_competencia` FOREIGN KEY (`id_competencia`) REFERENCES `competencias` (`id_competencia`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_falta_estudiante` FOREIGN KEY (`documento_estudiante`) REFERENCES `estudiantes` (`documento`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_falta_ficha` FOREIGN KEY (`id_ficha`) REFERENCES `fichas` (`id_ficha`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `fichas_asignadas`
 --
 ALTER TABLE `fichas_asignadas`
-  ADD CONSTRAINT `fk_ficha_asignada_instructor` FOREIGN KEY (`id_instructor`) REFERENCES `instructores` (`id_instructor`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_ficha_asignada_ficha` FOREIGN KEY (`id_ficha`) REFERENCES `fichas` (`id_ficha`) ON DELETE CASCADE;
-
---
--- Filtros para la tabla `faltas`
---
-ALTER TABLE `faltas`
-  ADD CONSTRAINT `fk_falta_estudiante` FOREIGN KEY (`documento_estudiante`) REFERENCES `estudiantes` (`documento`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_falta_ficha` FOREIGN KEY (`id_ficha`) REFERENCES `fichas` (`id_ficha`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_falta_competencia` FOREIGN KEY (`id_competencia`) REFERENCES `competencias` (`id_competencia`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_ficha_asignada_ficha` FOREIGN KEY (`id_ficha`) REFERENCES `fichas` (`id_ficha`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_ficha_asignada_instructor` FOREIGN KEY (`id_instructor`) REFERENCES `instructores` (`id_instructor`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -20,17 +20,18 @@ class AsistenciaService:
             current += datetime.timedelta(days=1)
         return count
 
-    def _calcular_sesiones_esperadas(self, horas_totales, fecha_inicio_ficha, fecha_hasta):
+    def _calcular_sesiones_esperadas(self, horas_totales, fecha_inicio_ficha, fecha_hasta, fecha_desde_rango=None):
         """
         Calcula el número de sesiones esperadas (de 6 horas).
-        Toma en cuenta solo días hábiles desde fecha_inicio_ficha hasta fecha_hasta.
+        Si la ficha no tiene fecha_inicio, usa el inicio del rango analizado.
         """
+        # Si la ficha no tiene fecha de inicio, usar el inicio del rango
+        if not fecha_inicio_ficha:
+            fecha_inicio_ficha = fecha_desde_rango
         if not fecha_inicio_ficha or fecha_inicio_ficha > fecha_hasta:
             return 0
         dias = self._calcular_dias_habiles(fecha_inicio_ficha, fecha_hasta)
-        # 1 sesión = 6 horas
         sesiones_por_horas = horas_totales / 6
-        # Limitar sesiones esperadas al número de días disponibles
         return min(dias, int(sesiones_por_horas))
 
   
@@ -96,8 +97,8 @@ class AsistenciaService:
 
     
     def obtener_fichas(self):
-        
-        self.db.cursor.execute("SELECT id_ficha, codigo_ficha, nombre_programa FROM fichas")
+        self.db.cursor.execute(
+            "SELECT id_ficha, codigo_ficha, nombre_programa, jornada FROM fichas ORDER BY codigo_ficha")
         return self.db.cursor.fetchall()
 
     def guardar_aprendiz_manual(self, datos, id_ficha):
@@ -354,7 +355,7 @@ class AsistenciaService:
                     ficha = fichas_data[fid]
                     fecha_inicio_ficha = ficha['fecha_inicio']
                     horas = ficha['horas']
-                    sesiones = self._calcular_sesiones_esperadas(horas, fecha_inicio_ficha, fecha_fin)
+                    sesiones = self._calcular_sesiones_esperadas(horas, fecha_inicio_ficha, fecha_fin, fecha_inicio)
                 else:
                     sesiones = 0
                 
@@ -365,9 +366,9 @@ class AsistenciaService:
                 total_presencias += presentes
                 total_faltas += faltas
 
-            # Obtener faltas registradas por instructores en el rango
+            # Solo faltas realmente registradas por instructores
             query_faltas = """
-                SELECT documento_estudiante, tipo_falta, COUNT(*) as total
+                SELECT tipo_falta, COUNT(*) as total
                 FROM faltas
                 WHERE fecha_falta BETWEEN %s AND %s
             """
@@ -380,27 +381,28 @@ class AsistenciaService:
                 fmt = ','.join(['%s'] * len(lista_ids))
                 query_faltas += f" AND documento_estudiante IN ({fmt})"
                 params_faltas.extend(lista_ids)
-            query_faltas += " GROUP BY documento_estudiante, tipo_falta"
+            query_faltas += " GROUP BY tipo_falta"
             self.db.cursor.execute(query_faltas, tuple(params_faltas))
-            faltas_registradas_raw = self.db.cursor.fetchall()
 
-            # Acumular totales de faltas e inasistencias del instructor
             total_faltas_instructor = 0
             total_retardos_instructor = 0
-            for row in faltas_registradas_raw:
+            for row in self.db.cursor.fetchall():
                 if row['tipo_falta'] == 'Retardo':
                     total_retardos_instructor += row['total']
                 else:
                     total_faltas_instructor += row['total']
 
+            # Retardos detectados automáticamente (por hora de entrada tardía)
+            total_retardos_auto = sum(retardos.values())
+
             return {
-                'expected': total_sesiones_esperadas,
+                'expected':          total_sesiones_esperadas,
                 'total_asistencias': total_presencias,
-                'faltas': total_faltas + total_faltas_instructor,
-                'retardos': total_retardos + total_retardos_instructor,
-                'detalles': asistencias_raw,
-                'fecha_inicio': fecha_inicio,
-                'fecha_fin': fecha_fin
+                'faltas':            total_faltas_instructor,          # solo las registradas explícitamente
+                'retardos':          total_retardos_auto + total_retardos_instructor,
+                'detalles':          asistencias_raw,
+                'fecha_inicio':      fecha_inicio,
+                'fecha_fin':         fecha_fin
             }
         except Exception as e:
             logging.exception(f"Error en obtener_metricas_reporte_multiple: {e}")
@@ -464,20 +466,25 @@ class AsistenciaService:
             return False
 
     def obtener_faltas_ficha(self, id_ficha, fecha_inicio=None, fecha_fin=None):
-        """Obtiene todas las faltas de una ficha en un rango de fechas"""
-        if not fecha_inicio:
-            fecha_inicio = datetime.date.today().replace(day=1)
-        if not fecha_fin:
-            fecha_fin = datetime.date.today()
-        
-        query = """SELECT f.*, e.nombre_completo, c.nombre_competencia
-                   FROM faltas f
-                   INNER JOIN estudiantes e ON f.documento_estudiante = e.documento
-                   INNER JOIN competencias c ON f.id_competencia = c.id_competencia
-                   WHERE f.id_ficha = %s
-                   AND f.fecha_falta BETWEEN %s AND %s
-                   ORDER BY f.fecha_falta DESC"""
-        self.db.cursor.execute(query, (id_ficha, fecha_inicio, fecha_fin))
+        """Obtiene faltas de una ficha. Sin rango = todas las registradas."""
+        if fecha_inicio and fecha_fin:
+            query = """SELECT f.*, e.nombre_completo, c.nombre_competencia
+                       FROM faltas f
+                       INNER JOIN estudiantes e ON f.documento_estudiante = e.documento
+                       INNER JOIN competencias c ON f.id_competencia = c.id_competencia
+                       WHERE f.id_ficha = %s
+                       AND f.fecha_falta BETWEEN %s AND %s
+                       ORDER BY f.fecha_falta DESC"""
+            self.db.cursor.execute(query, (id_ficha, fecha_inicio, fecha_fin))
+        else:
+            # Sin filtro de fecha: traer todas las faltas de la ficha
+            query = """SELECT f.*, e.nombre_completo, c.nombre_competencia
+                       FROM faltas f
+                       INNER JOIN estudiantes e ON f.documento_estudiante = e.documento
+                       INNER JOIN competencias c ON f.id_competencia = c.id_competencia
+                       WHERE f.id_ficha = %s
+                       ORDER BY f.fecha_falta DESC"""
+            self.db.cursor.execute(query, (id_ficha,))
         return self.db.cursor.fetchall()
 
     def obtener_faltas_estudiante(self, documento_estudiante, id_ficha=None):
@@ -505,4 +512,136 @@ class AsistenciaService:
                    AND fecha_falta BETWEEN %s AND %s
                    GROUP BY tipo_falta"""
         self.db.cursor.execute(query, (id_ficha, fecha_inicio, fecha_fin))
+        return self.db.cursor.fetchall()
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # GESTIÓN DE INSTRUCTORES
+    # ──────────────────────────────────────────────────────────────────────────
+    def obtener_competencias_por_tipo(self, tipo=None):
+        """Retorna competencias filtradas por tipo ('Técnica', 'Complementaria') o todas."""
+        if tipo:
+            self.db.cursor.execute(
+                "SELECT id_competencia, nombre_competencia, horas_totales, Tipo "
+                "FROM competencias WHERE Tipo=%s ORDER BY nombre_competencia",
+                (tipo,))
+        else:
+            self.db.cursor.execute(
+                "SELECT id_competencia, nombre_competencia, horas_totales, Tipo "
+                "FROM competencias ORDER BY Tipo, nombre_competencia")
+        return self.db.cursor.fetchall()
+
+    def obtener_instructores(self):
+        """Retorna todos los instructores con su competencia principal y fichas asignadas."""
+        self.db.cursor.execute("""
+            SELECT i.*,
+                   c.nombre_competencia AS nombre_especialidad,
+                   c.Tipo               AS tipo_especialidad,
+                   GROUP_CONCAT(f.codigo_ficha ORDER BY f.codigo_ficha SEPARATOR ', ')
+                       AS fichas_asignadas_txt
+            FROM instructores i
+            LEFT JOIN competencias c ON i.id_competencia_principal = c.id_competencia
+            LEFT JOIN fichas_asignadas fa ON i.id_instructor = fa.id_instructor
+            LEFT JOIN fichas f ON fa.id_ficha = f.id_ficha
+            GROUP BY i.id_instructor
+            ORDER BY i.nombre_completo
+        """)
+        return self.db.cursor.fetchall()
+
+    def crear_instructor(self, datos):
+        """
+        Crea un nuevo instructor.
+        datos: dict con claves documento, nombre_completo, correo, usuario,
+               id_competencia_principal, fichas (list of id_ficha),
+               comp_complementaria_por_ficha (dict {id_ficha: id_competencia|None})
+        Retorna (True, msg) o (False, msg).
+        """
+        try:
+            self.db.cursor.execute(
+                """INSERT INTO instructores
+                   (documento, nombre_completo, correo, usuario, password,
+                    id_competencia_principal, cambio_pass)
+                   VALUES (%s,%s,%s,%s,'sena123',%s,0)""",
+                (datos['documento'], datos['nombre_completo'], datos.get('correo',''),
+                 datos['usuario'], datos.get('id_competencia_principal') or None)
+            )
+            id_inst = self.db.cursor.lastrowid
+
+            # Asignar fichas
+            for id_ficha in datos.get('fichas', []):
+                comp_comp = (datos.get('comp_complementaria_por_ficha') or {}).get(id_ficha)
+                self.db.cursor.execute(
+                    """INSERT IGNORE INTO fichas_asignadas
+                       (id_instructor, id_ficha, id_competencia_complementaria)
+                       VALUES (%s,%s,%s)""",
+                    (id_inst, id_ficha, comp_comp or None)
+                )
+
+            self.db.conexion.commit()
+            return True, f"Instructor '{datos['nombre_completo']}' creado correctamente."
+        except Exception as e:
+            self.db.conexion.rollback()
+            logging.error(f"Error creando instructor: {e}")
+            if "Duplicate entry" in str(e):
+                return False, "Ya existe un instructor con ese documento o usuario."
+            return False, f"Error al crear instructor: {str(e)[:120]}"
+
+    def actualizar_instructor(self, id_instructor, datos):
+        """
+        Actualiza datos de un instructor existente y sus fichas asignadas.
+        datos: mismas claves que crear_instructor.
+        """
+        try:
+            self.db.cursor.execute(
+                """UPDATE instructores SET
+                   nombre_completo=%s, correo=%s, usuario=%s,
+                   id_competencia_principal=%s
+                   WHERE id_instructor=%s""",
+                (datos['nombre_completo'], datos.get('correo',''), datos['usuario'],
+                 datos.get('id_competencia_principal') or None, id_instructor)
+            )
+
+            # Reemplazar fichas asignadas
+            self.db.cursor.execute(
+                "DELETE FROM fichas_asignadas WHERE id_instructor=%s", (id_instructor,))
+            for id_ficha in datos.get('fichas', []):
+                comp_comp = (datos.get('comp_complementaria_por_ficha') or {}).get(id_ficha)
+                self.db.cursor.execute(
+                    """INSERT INTO fichas_asignadas
+                       (id_instructor, id_ficha, id_competencia_complementaria)
+                       VALUES (%s,%s,%s)""",
+                    (id_instructor, id_ficha, comp_comp or None)
+                )
+
+            self.db.conexion.commit()
+            return True, "Instructor actualizado correctamente."
+        except Exception as e:
+            self.db.conexion.rollback()
+            logging.error(f"Error actualizando instructor: {e}")
+            return False, f"Error: {str(e)[:120]}"
+
+    def eliminar_instructor(self, id_instructor):
+        """Elimina un instructor y sus asignaciones."""
+        try:
+            self.db.cursor.execute(
+                "DELETE FROM fichas_asignadas WHERE id_instructor=%s", (id_instructor,))
+            self.db.cursor.execute(
+                "DELETE FROM instructores WHERE id_instructor=%s", (id_instructor,))
+            self.db.conexion.commit()
+            return True, "Instructor eliminado."
+        except Exception as e:
+            self.db.conexion.rollback()
+            return False, f"Error: {str(e)[:120]}"
+
+    def obtener_fichas_asignadas_instructor(self, id_instructor):
+        """Retorna fichas con su competencia complementaria para un instructor."""
+        self.db.cursor.execute("""
+            SELECT fa.id_ficha, fa.id_competencia_complementaria,
+                   f.codigo_ficha, f.nombre_programa, f.jornada,
+                   c.nombre_competencia AS nombre_complementaria
+            FROM fichas_asignadas fa
+            JOIN fichas f ON fa.id_ficha = f.id_ficha
+            LEFT JOIN competencias c ON fa.id_competencia_complementaria = c.id_competencia
+            WHERE fa.id_instructor = %s
+            ORDER BY f.codigo_ficha
+        """, (id_instructor,))
         return self.db.cursor.fetchall()
