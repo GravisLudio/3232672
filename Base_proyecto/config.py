@@ -1,9 +1,5 @@
-"""
-Configuración centralizada para C.R.S (Chronos Registry System)
-Colores, constantes y valores por defecto
-"""
+"""Configuración centralizada para C.R.S (Chronos Registry System)"""
 
-# ===== COLORES SENA =====
 COLORES = {
     'SENA_GREEN': '#39A900',
     'SENA_DARK': '#2D5A27',
@@ -20,7 +16,6 @@ COLORES = {
     'BORDER_GRAY': '#DDD',
 }
 
-# ===== FUENTES =====
 FUENTES = {
     'TITULO': ('Segoe UI', 28, 'bold'),
     'SUBTITULO': ('Segoe UI', 16, 'bold'),
@@ -32,7 +27,6 @@ FUENTES = {
     'LABEL': ('Segoe UI', 13, 'bold'),
 }
 
-# ===== DIMENSIONES =====
 DIMENSIONES = {
     'BTN_HEIGHT': 65,
     'BTN_WIDTH': 450,
@@ -44,7 +38,6 @@ DIMENSIONES = {
     'CORNER_RADIUS': 20,
 }
 
-# ===== TEXTO Y ETIQUETAS =====
 TEXTOS = {
     'TITULO_APP': 'C.R.S - Chronos Registry System',
     'SUBTITULO_APP': 'Sistema Integrado de Registro de Asistencia | High Softwares',
@@ -91,3 +84,4 @@ FEATURES = {
     'AUDITAR_ACCIONES': True,
     'REQUIERE_CAMBIO_PASS': True,
 }
+

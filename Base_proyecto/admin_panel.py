@@ -10,7 +10,7 @@ import logging
 import datetime
 import calendar as _cal
 
-# ===== ESTILOS PARA TABLAS =====
+
 def configurar_estilo_tablas():
     """Configura el estilo de las tablas (Treeview)"""
     style = ttk.Style()
@@ -30,7 +30,7 @@ def configurar_estilo_tablas():
 
 
 class PantallaAdministrador:
-    # ===== ADMINISTRADOR INTERFACE =====
+
     
     def __init__(self, frame_admin, db, servicio, admin_usuario, app):
         self.frame = frame_admin
@@ -67,13 +67,7 @@ class PantallaAdministrador:
         head_right = ctk.CTkFrame(head_top, fg_color="transparent")
         head_right.pack(side="right")
         
-        ctk.CTkButton(head_right, text="📊 DASHBOARD", width=140,
-                     fg_color="white", text_color=self.sena_orange,
-                     font=("Segoe UI", 11, "bold"),
-                     hover_color="#F5F5F5",
-                     command=self.app.mostrar_dashboard).pack(side="left", padx=8)
-        
-        ctk.CTkButton(head_right, text="🚪 CERRAR", width=100,
+        ctk.CTkButton(head_right, text=" CERRAR", width=100,
                      fg_color="#E74C3C", text_color="white",
                      font=("Segoe UI", 11, "bold"),
                      hover_color="#C0392B",
@@ -905,7 +899,7 @@ class PantallaAdministrador:
             self._refrescar_papelera()
             messagebox.showinfo("Éxito", f"{len(docs)} aprendiz(ces) eliminados permanentemente")
 
-# ===== CLASE PANEL INSTRUCTOR =====
+
 
 class PantallaInstructor:
     """Gestiona la pantalla del instructor."""
@@ -1594,3 +1588,4 @@ class PantallaInstructor:
             except:
                 pass
             self.app.mostrar_inicio()
+

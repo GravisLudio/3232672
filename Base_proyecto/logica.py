@@ -4,12 +4,12 @@ import datetime
 import logging
 import bcrypt
 
-# ===== SERVICIO DE ASISTENCIA =====
+
 class AsistenciaService:
     def __init__(self, db_conexion):
         self.db = db_conexion
 
-    # ===== UTILIDADES INTERNAS =====
+
     def _calcular_dias_habiles(self, fecha_inicio, fecha_fin):
         count = 0
         current = fecha_inicio
@@ -28,7 +28,7 @@ class AsistenciaService:
         sesiones_por_horas = horas_totales / 6
         return min(dias, int(sesiones_por_horas))
 
-    # ===== REGISTRO DE ASISTENCIA =====
+
     def registrar_entrada(self, documento):
         
         if not documento:
@@ -66,7 +66,7 @@ class AsistenciaService:
         else:
             return False, "❌ No tienes una entrada pendiente para cerrar."
 
-    # ===== AUTENTICACIÓN =====
+
     def login_aprendiz(self, documento, password):
         q = "SELECT * FROM estudiantes WHERE documento=%s"
         self.db.cursor.execute(q, (documento,))
@@ -100,7 +100,7 @@ class AsistenciaService:
             "SELECT id_ficha, codigo_ficha, nombre_programa, jornada FROM fichas ORDER BY codigo_ficha")
         return self.db.cursor.fetchall()
 
-    # ===== GESTIÓN DE APRENDICES =====
+
     def guardar_aprendiz_manual(self, datos, id_ficha):
 
         documento = datos.get("Documento", "").strip()
@@ -147,7 +147,7 @@ class AsistenciaService:
                 return False
         return False
 
-    # ===== GESTIÓN DE PAPELERA =====
+
     def mandar_a_papelera(self, documento):
         try:
             self.db.cursor.execute(
@@ -185,7 +185,7 @@ class AsistenciaService:
             logging.error(f"Error al eliminar permanentemente {documento}: {ex}", exc_info=True)
             return False
 
-    # ===== REGISTROS DE APRENDIZ =====
+
     def obtener_registros_dia(self, documento, fecha):
         query = "SELECT * FROM asistencias WHERE documento_estudiante = %s AND DATE(fecha_registro) = %s"
         self.db.cursor.execute(query, (documento, fecha))
@@ -200,7 +200,7 @@ class AsistenciaService:
         self.db.cursor.execute(query, (documento, fecha_inicio, fecha_fin))
         return self.db.cursor.fetchall()
 
-    # ===== MÉTRICAS Y REPORTES =====
+
     def obtener_metricas_reporte_multiple(self, lista_ids, modo, rango, fecha_inicio=None):
         try:
             # Normalizar fecha_inicio
@@ -394,7 +394,7 @@ class AsistenciaService:
             logging.exception(f"Error en obtener_metricas_reporte_multiple: {e}")
             return {'expected': 0, 'total_asistencias': 0, 'faltas': 0, 'retardos': 0, 'detalles': [], 'fecha_inicio': None, 'fecha_fin': None}
 
-    # ===== INSTRUCTORES =====
+
     def login_instructor(self, usuario, password):
         q = "SELECT * FROM instructores WHERE usuario=%s AND password=%s"
         self.db.cursor.execute(q, (usuario, password))
@@ -409,7 +409,7 @@ class AsistenciaService:
         self.db.cursor.execute(query, (id_instructor,))
         return self.db.cursor.fetchall()
 
-    # ===== VALIDACIONES =====
+
     def validar_instructor_ficha(self, id_instructor, id_ficha):
         """Verifica que el instructor está asignado a esa ficha"""
         query = "SELECT 1 FROM fichas_asignadas WHERE id_instructor=%s AND id_ficha=%s LIMIT 1"
@@ -430,7 +430,7 @@ class AsistenciaService:
         self.db.cursor.execute(query, (id_ficha,))
         return self.db.cursor.fetchall()
 
-    # ===== FALTAS =====
+
     def registrar_falta(self, id_instructor, documento_estudiante, id_ficha, id_competencia, fecha_falta, 
                        tipo_falta="Inasistencia", razon="", registrado_por=""):
         """Registra una falta en el sistema CON VALIDACIONES DE AUTORIZACIÓN"""
@@ -646,3 +646,4 @@ class AsistenciaService:
             ORDER BY f.codigo_ficha
         """, (id_instructor,))
         return self.db.cursor.fetchall()
+

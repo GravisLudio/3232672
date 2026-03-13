@@ -1,11 +1,8 @@
 import re
 
-# ===== VALIDACIONES =====
 class Validador:
-    
     @staticmethod
     def validar_documento(documento):
-        """Valida formato de documento (números)"""
         if not documento or not str(documento).strip():
             return False, "Documento es requerido"
         if not str(documento).isdigit():
@@ -16,7 +13,6 @@ class Validador:
     
     @staticmethod
     def validar_email(email):
-        """Valida formato email"""
         patron = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not email:
             return False, "Email es requerido"
@@ -26,18 +22,16 @@ class Validador:
     
     @staticmethod
     def validar_nombre(nombre):
-        """Valida que nombre no esté vacío y tenga formato"""
         if not nombre or not str(nombre).strip():
             return False, "Nombre es requerido"
         if len(str(nombre)) < 3:
             return False, "Nombre muy corto (mín. 3 caracteres)"
-        if any(char.isdigit() for char in nombre[:1]):  # No puede empezar con número
+        if any(char.isdigit() for char in nombre[:1]):
             return False, "Nombre no puede empezar con número"
         return True, "OK"
     
     @staticmethod
     def validar_password(password):
-        """Valida contraseña: 8+ chars, mayús, minús, números"""
         requisitos = {
             'longitud': len(password) >= 8,
             'mayuscula': any(c.isupper() for c in password),
@@ -56,12 +50,10 @@ class Validador:
             if not requisitos['numero']:
                 falta.append("número")
             return False, f"Falta: {', '.join(falta)}"
-        
         return True, "OK"
     
     @staticmethod
     def validar_credenciales(usuario, password):
-        """Valida usuario y contraseña juntos"""
         if not usuario or not password:
             return False, "Usuario y contraseña son requeridos"
         if len(str(usuario)) < 3:
@@ -72,7 +64,6 @@ class Validador:
     
     @staticmethod
     def validar_registro_aprendiz(datos_dict):
-        """Valida diccionario de registro de aprendiz"""
         doc_valido, msg = Validador.validar_documento(datos_dict.get('Documento'))
         if not doc_valido:
             return False, msg
@@ -86,3 +77,4 @@ class Validador:
             return False, msg
         
         return True, "OK"
+

@@ -1,6 +1,6 @@
 """
-Módulo DashboardManager y PasswordManager
-Encapsula funcionalidades de dashboard y cambio de contraseña
+Módulo PasswordManager
+Encapsula funcionalidades de cambio de contraseña y calendario personalizado
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -9,6 +9,7 @@ from config import COLORES, FUENTES
 import datetime
 import calendar as _calendar
 import bcrypt
+import logging
 
 
 class CalendarioPersonalizado(ctk.CTkFrame):
@@ -236,156 +237,6 @@ class CalendarioPersonalizado(ctk.CTkFrame):
             self.callback = callback
 
 
-class DashboardManager:
-    """Gestiona la ventana de dashboard con KPIs"""
-
-    def __init__(self, app, db, servicio):
-        self.app = app
-        self.db = db
-        self.servicio = servicio
-        self.sena_green = COLORES['SENA_GREEN']
-        self.sena_orange = COLORES['SENA_ORANGE']
-        self.bg_light = COLORES['BG_LIGHT']
-
-    def mostrar_dashboard(self):
-        """Muestra ventana de dashboard con métricas Hoy/Semana/Mes - Estilo moderno"""
-        v = ctk.CTkToplevel(self.app.root)
-        v.title("📊 C.R.S - DASHBOARD")
-        v.geometry("1200x700")
-        v.configure(fg_color=self.bg_light)
-
-        # Header profesional
-        header = ctk.CTkFrame(v, height=100, corner_radius=0, 
-                             fg_color=self.sena_orange, border_width=0)
-        header.pack(fill="x", side="top")
-        
-        header_content = ctk.CTkFrame(header, fg_color="transparent")
-        header_content.pack(side="top", fill="x", padx=25, pady=(15, 10))
-        
-        ctk.CTkLabel(header_content, text="📊 Dashboard de Asistencias", 
-                    font=("Segoe UI", 20, "bold"),
-                    text_color="white").pack(side="left")
-        
-        # Selector de fecha en el header - Calendario moderno
-        cal_frame = ctk.CTkFrame(header, fg_color="transparent")
-        cal_frame.pack(side="bottom", fill="x", padx=25, pady=(0, 15))
-        
-        ctk.CTkLabel(cal_frame, text="📅 Selecciona fecha:", 
-                    font=("Segoe UI", 11, "bold"),
-                    text_color="white").pack(side="left", padx=(0, 10))
-        
-        # Calendario personalizado moderno
-        self.calendario_personalizado = CalendarioPersonalizado(cal_frame, self.sena_green, self.bg_light)
-        self.calendario_personalizado.pack(side="left")
-        
-        # Obtener referencia al calendario interno para compatibilidad
-        cal = self.calendario_personalizado
-
-        # Contenedor principal
-        main_frame = ctk.CTkFrame(v, fg_color=self.bg_light)
-        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
-
-        def actualizar_dashboard(e=None):
-            # Limpiar frame anterior
-            for w in main_frame.winfo_children():
-                w.destroy()
-
-            try:
-                hoy = cal.selection_get()
-
-                # Calcular rangos
-                fecha_hoy = hoy
-                dias_desde_lunes = hoy.weekday()
-                lunes = hoy - datetime.timedelta(days=dias_desde_lunes)
-                viernes = lunes + datetime.timedelta(days=4)
-
-                mes_ini = hoy.replace(day=1)
-                import calendar as _cal
-                ultimo_dia = _cal.monthrange(hoy.year, hoy.month)[1]
-                mes_fin = hoy.replace(day=ultimo_dia)
-
-                # Obtener datos
-                datos_dia = self.servicio.obtener_metricas_reporte_multiple([], "Ficha", "Día", fecha_hoy)
-                datos_sem = self.servicio.obtener_metricas_reporte_multiple([], "Ficha", "Semana", lunes)
-                datos_mes = self.servicio.obtener_metricas_reporte_multiple([], "Ficha", "Mes", mes_ini)
-
-                # Contenedor de columnas
-                cols_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-                cols_frame.pack(fill="both", expand=True)
-
-                def crear_tarjeta_metrica(parent, titulo, fecha_inicio, fecha_fin, datos, emoji):
-                    # Tarjeta principal
-                    card = ctk.CTkFrame(parent, fg_color="white", corner_radius=15, 
-                                       border_width=2, border_color="#E0E0E0")
-                    card.pack(side="left", fill="both", expand=True, padx=8)
-
-                    # Encabezado de tarjeta
-                    header_card = ctk.CTkFrame(card, fg_color=self.sena_green, 
-                                              corner_radius=13, border_width=0)
-                    header_card.pack(fill="x", padx=2, pady=2)
-                    
-                    ctk.CTkLabel(header_card, text=f"{emoji} {titulo}", 
-                                font=("Segoe UI", 14, "bold"),
-                                text_color="white").pack(pady=12)
-
-                    # Rango de fechas
-                    rango_txt = fecha_inicio.strftime("%d/%m/%Y") if fecha_inicio == fecha_fin else \
-                               f"{fecha_inicio.strftime('%d/%m')} - {fecha_fin.strftime('%d/%m/%Y')}"
-                    ctk.CTkLabel(card, text=rango_txt, font=("Segoe UI", 10),
-                                text_color="#999", fg_color="white").pack(pady=(8, 0))
-
-                    # Separador
-                    sep = ctk.CTkFrame(card, fg_color="#E0E0E0", height=1)
-                    sep.pack(fill="x", padx=15, pady=10)
-
-                    # Contenido de datos
-                    content = ctk.CTkFrame(card, fg_color="white")
-                    content.pack(fill="both", expand=True, padx=15, pady=15)
-
-                    asist = datos.get('total_asistencias', 0)
-                    faltas = datos.get('faltas', 0)
-                    retardos = datos.get('retardos', 0)
-
-                    color_asist = self.sena_green if asist >= 10 else "#E74C3C"
-
-                    metrics = [
-                        ("✓ Asistencias", asist, color_asist),
-                        ("✗ Faltas", faltas, "#FF9800" if faltas > 2 else "#999"),
-                        ("⏰ Retardos", retardos, "#E67E22" if retardos > 0 else "#999")
-                    ]
-                    
-                    for label, valor, color in metrics:
-                        metric_frame = ctk.CTkFrame(content, fg_color="white")
-                        metric_frame.pack(fill="x", pady=10)
-                        
-                        ctk.CTkLabel(metric_frame, text=label, font=("Segoe UI", 11),
-                                    text_color="#555", fg_color="white").pack(side="left")
-                        
-                        ctk.CTkLabel(metric_frame, text=str(valor), font=("Segoe UI", 18, "bold"),
-                                    text_color=color, fg_color="white").pack(side="right")
-
-                # Crear tarjetas
-                crear_tarjeta_metrica(cols_frame, "Hoy", fecha_hoy, fecha_hoy, datos_dia, "📅")
-                crear_tarjeta_metrica(cols_frame, "Semana", lunes, viernes, datos_sem, "📊")
-                crear_tarjeta_metrica(cols_frame, "Mes", mes_ini, mes_fin, datos_mes, "📈")
-
-                # Botón cerrar
-                btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-                btn_frame.pack(pady=(15, 0))
-                ctk.CTkButton(btn_frame, text="🚪 Cerrar", width=150,
-                             fg_color="#E74C3C", hover_color="#C0392B",
-                             font=("Segoe UI", 11, "bold"),
-                             command=v.destroy).pack()
-
-            except Exception as ex:
-                ctk.CTkLabel(main_frame, text=f"❌ Error: {ex}", 
-                            text_color="red", font=("Segoe UI", 11)).pack(pady=20)
-
-        cal.bind("<<CalendarSelected>>", actualizar_dashboard)
-        cal.selection_set(datetime.date.today())
-        actualizar_dashboard()
-
-
 class PasswordManager:
     """Gestiona el cambio obligatorio de contraseña con diseño moderno"""
 
@@ -511,3 +362,4 @@ class PasswordManager:
                      fg_color=self.sena_green, hover_color="#32900D",
                      font=("Segoe UI", 12, "bold"),
                      command=guardar).pack(fill="x")
+

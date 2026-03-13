@@ -612,3 +612,4 @@ class ReportesManager:
 
     def limpiar_lista_reporte(self):
         self.limpiar_items()
+
