@@ -303,8 +303,9 @@ class ReportesManager:
             hoy = datetime.date.today()
             meses, self._month_map = [], {}
             for m in range(36):
-                y  = hoy.year - ((hoy.month - m - 1) // 12)
-                mo = ((hoy.month - m - 1) % 12) + 1
+                total_meses = hoy.year * 12 + (hoy.month - 1) - m
+                y  = total_meses // 12
+                mo = total_meses % 12 + 1
                 ini = datetime.date(y, mo, 1)
                 lbl = ini.strftime("%B %Y").capitalize()
                 meses.append(lbl)
