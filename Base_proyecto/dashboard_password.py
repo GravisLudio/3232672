@@ -8,6 +8,7 @@ import customtkinter as ctk
 from config import COLORES, FUENTES
 import datetime
 import calendar as _calendar
+import bcrypt
 
 
 class CalendarioPersonalizado(ctk.CTkFrame):
@@ -492,9 +493,11 @@ class PasswordManager:
         def guardar():
             if validar():
                 try:
+                    # Hashear contraseña con bcrypt
+                    hash_password = bcrypt.hashpw(pass_var.get().encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
                     self.db.cursor.execute(
                         "UPDATE estudiantes SET password=%s, cambio_pass=1 WHERE documento=%s",
-                        (pass_var.get(), documento)
+                        (hash_password, documento)
                     )
                     self.db.conexion.commit()
                     messagebox.showinfo("✅ C.R.S", "Contraseña configurada exitosamente")

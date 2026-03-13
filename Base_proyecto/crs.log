@@ -16,3 +16,11 @@
 2026-03-13 13:37:24,053 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
 2026-03-13 13:46:09,994 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
 2026-03-13 13:51:58,038 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-13 14:56:22,419 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-13 15:16:29,487 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-13 15:16:53,369 ERROR root: Error al verificar password: Invalid salt
+2026-03-13 15:17:01,664 ERROR root: Error al verificar password: Invalid salt
+2026-03-13 15:17:15,639 ERROR root: Error al verificar password: Invalid salt
+2026-03-13 15:20:58,374 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-13 15:23:09,158 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.
+2026-03-13 15:24:44,028 INFO root: Conexión exitosa a la base de datos TechSenaHSGS.

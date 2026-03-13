@@ -2,6 +2,7 @@ import pandas as pd
 from tkinter import messagebox, filedialog
 import datetime
 import logging
+import bcrypt
 
 # ===== SERVICIO DE ASISTENCIA =====
 class AsistenciaService:
@@ -67,15 +68,26 @@ class AsistenciaService:
 
     # ===== AUTENTICACIÓN =====
     def login_aprendiz(self, documento, password):
-        q = "SELECT * FROM estudiantes WHERE documento=%s AND password=%s"
-        self.db.cursor.execute(q, (documento, password))
-        return self.db.cursor.fetchone()
+        q = "SELECT * FROM estudiantes WHERE documento=%s"
+        self.db.cursor.execute(q, (documento,))
+        usuario = self.db.cursor.fetchone()
+        
+        if usuario:
+            # Verificar contraseña hasheada con bcrypt
+            try:
+                if bcrypt.checkpw(password.encode('utf-8'), usuario['password'].encode('utf-8')):
+                    return usuario
+            except Exception as e:
+                logging.error(f"Error al verificar password: {e}")
+        return None
 
     def actualizar_password(self, documento, nueva_pass):
         if len(nueva_pass) < 4:
             return False, "La contraseña debe tener al menos 4 caracteres."
         try:
-            self.db.cursor.execute("UPDATE estudiantes SET password=%s, cambio_pass=1 WHERE documento=%s", (nueva_pass, documento))
+            # Hashear contraseña con bcrypt
+            hash_password = bcrypt.hashpw(nueva_pass.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            self.db.cursor.execute("UPDATE estudiantes SET password=%s, cambio_pass=1 WHERE documento=%s", (hash_password, documento))
             self.db.conexion.commit()
             return True, "✅ Seguridad actualizada."
         except Exception as e:
