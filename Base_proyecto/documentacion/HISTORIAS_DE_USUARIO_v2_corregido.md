@@ -1,5 +1,5 @@
 # 📋 Historias de Usuario — C.R.S v2.0
-## Chronos Registry System | SENA - Centro de Gestión Administrativa HSGS
+## Chronos Registry System | SENA - Centro Industrial del Diseño y la Manufactura CIDM
 
 ---
 
