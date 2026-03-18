@@ -1,12 +1,66 @@
-import tkinter as tk
+# ── Bootstrap: verifica e instala dependencias con el Python que está corriendo ──
+import sys
+import subprocess
+import importlib
+
+def _asegurar_pip():
+    """Instala pip si no está disponible"""
+    try:
+        import pip  # noqa
+    except ImportError:
+        subprocess.check_call(
+            [sys.executable, "-m", "ensurepip", "--upgrade"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--upgrade", "pip", "-q"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+
+def _instalar_si_falta(paquete, import_name=None):
+    nombre = import_name or paquete
+    try:
+        importlib.import_module(nombre)
+    except ImportError:
+        print(f"[CRS] Instalando {paquete}...")
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", paquete,
+                 "--only-binary", ":all:", "-q"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        except Exception:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", paquete, "-q"]
+            )
+
+_asegurar_pip()
+
+_dependencias = [
+    ("bcrypt",                 "bcrypt"),
+    ("customtkinter",          "customtkinter"),
+    ("mysql-connector-python", "mysql.connector"),
+    ("tkcalendar",             "tkcalendar"),
+    ("pandas",                 "pandas"),
+    ("openpyxl",               "openpyxl"),
+    ("reportlab",              "reportlab"),
+    ("python-dotenv",          "dotenv"),
+    ("Pillow",                 "PIL"),
+]
+
+for _pkg, _imp in _dependencias:
+    _instalar_si_falta(_pkg, _imp)
+# ── Fin bootstrap ─────────────────────────────────────────────────────────────
+
+import tkinter as tk 
 from tkinter import ttk, messagebox, filedialog
 import pandas as pd
-from conexion import InventarioDB
+from conexion import InventarioDB 
 from tkcalendar import Calendar
 import datetime
 import re
 import bcrypt
-import customtkinter as ctk
+import customtkinter as ctk 
 import logging
 from logging_config import configure_logging
 from PIL import Image, ImageTk
@@ -51,11 +105,33 @@ ctk.set_default_color_theme("green")
 configure_logging()
 
 
+def _calcular_escala(root):
+    """Calcula factor de escala según resolución real de la pantalla.
+    Referencia: 1080p = factor 1.0. Pantallas menores reducen, mayores aumentan."""
+    alto = root.winfo_screenheight()
+    if alto >= 1440:  return 1.25
+    if alto >= 1080:  return 1.0
+    if alto >= 900:   return 0.88
+    if alto >= 768:   return 0.78
+    return 0.70       # resoluciones muy pequeñas
+
+def _s(valor, escala):
+    """Escala un valor numérico (tamaño, font, padding) según el factor."""
+    return max(1, int(valor * escala))
+
+
 class SistemaHSGSCRS:
     def __init__(self, root):
         self.root = root
         self.root.title("C.R.S - Chronos Registry System")
-        
+
+        # ── Escala adaptativa según resolución ────────────────────────────────
+        self.root.update_idletasks()  # necesario para que winfo_screenheight() sea correcto
+        self.escala = _calcular_escala(self.root)
+        ctk.set_widget_scaling(self.escala)
+        ctk.set_window_scaling(self.escala)
+        # ──────────────────────────────────────────────────────────────────────
+
         # Ruta base del script para recursos
         self.ruta_base = os.path.dirname(os.path.abspath(__file__))
         
