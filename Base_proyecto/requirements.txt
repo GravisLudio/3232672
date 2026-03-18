@@ -1,9 +1,9 @@
+bcrypt
+customtkinter
 mysql-connector-python
 pandas
-tkcalendar
 openpyxl
-customtkinter
+tkcalendar
 reportlab
 python-dotenv
 Pillow
-bcrypt

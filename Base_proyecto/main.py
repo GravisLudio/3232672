@@ -1,66 +1,12 @@
-# ── Bootstrap: verifica e instala dependencias con el Python que está corriendo ──
-import sys
-import subprocess
-import importlib
-
-def _asegurar_pip():
-    """Instala pip si no está disponible"""
-    try:
-        import pip  # noqa
-    except ImportError:
-        subprocess.check_call(
-            [sys.executable, "-m", "ensurepip", "--upgrade"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "--upgrade", "pip", "-q"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-
-def _instalar_si_falta(paquete, import_name=None):
-    nombre = import_name or paquete
-    try:
-        importlib.import_module(nombre)
-    except ImportError:
-        print(f"[CRS] Instalando {paquete}...")
-        try:
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", paquete,
-                 "--only-binary", ":all:", "-q"],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-        except Exception:
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", paquete, "-q"]
-            )
-
-_asegurar_pip()
-
-_dependencias = [
-    ("bcrypt",                 "bcrypt"),
-    ("customtkinter",          "customtkinter"),
-    ("mysql-connector-python", "mysql.connector"),
-    ("tkcalendar",             "tkcalendar"),
-    ("pandas",                 "pandas"),
-    ("openpyxl",               "openpyxl"),
-    ("reportlab",              "reportlab"),
-    ("python-dotenv",          "dotenv"),
-    ("Pillow",                 "PIL"),
-]
-
-for _pkg, _imp in _dependencias:
-    _instalar_si_falta(_pkg, _imp)
-# ── Fin bootstrap ─────────────────────────────────────────────────────────────
-
-import tkinter as tk 
+import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import pandas as pd
-from conexion import InventarioDB 
+from conexion import InventarioDB
 from tkcalendar import Calendar
 import datetime
 import re
 import bcrypt
-import customtkinter as ctk 
+import customtkinter as ctk
 import logging
 from logging_config import configure_logging
 from PIL import Image, ImageTk

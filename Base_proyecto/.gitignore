@@ -1,0 +1,28 @@
+# Logs del sistema
+*.log
+crs.log
+
+# Variables de entorno (contiene credenciales)
+.env
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Cache de Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# VS Code
+.vscode/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos temporales
+*.tmp
+*.bak
