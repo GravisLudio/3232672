@@ -72,14 +72,24 @@ class AsistenciaService:
         q = "SELECT * FROM estudiantes WHERE documento=%s"
         self.db.cursor.execute(q, (documento,))
         usuario = self.db.cursor.fetchone()
-        
-        if usuario:
-            # Verificar contraseña hasheada con bcrypt
-            try:
-                if bcrypt.checkpw(password.encode('utf-8'), usuario['password'].encode('utf-8')):
-                    return usuario
-            except Exception as e:
-                logging.error(f"Error al verificar password: {e}")
+
+        if not usuario:
+            return None
+
+        pwd_guardado = usuario['password'] or ''
+
+        # Contraseña en texto plano (antes del sistema de hash o sena123 sin cambiar)
+        if not pwd_guardado.startswith('$2b$') and not pwd_guardado.startswith('$2a$'):
+            if password == pwd_guardado:
+                return usuario
+            return None
+
+        # Contraseña hasheada con bcrypt
+        try:
+            if bcrypt.checkpw(password.encode('utf-8'), pwd_guardado.encode('utf-8')):
+                return usuario
+        except Exception as e:
+            logging.error(f"Error al verificar password: {e}")
         return None
 
     def actualizar_password(self, documento, nueva_pass):
@@ -403,9 +413,28 @@ class AsistenciaService:
 
 
     def login_instructor(self, usuario, password):
-        q = "SELECT * FROM instructores WHERE usuario=%s AND password=%s"
-        self.db.cursor.execute(q, (usuario, password))
-        return self.db.cursor.fetchone()
+        q = "SELECT * FROM instructores WHERE usuario=%s"
+        self.db.cursor.execute(q, (usuario,))
+        instructor = self.db.cursor.fetchone()
+
+        if not instructor:
+            return None
+
+        pwd_guardado = instructor['password'] or ''
+
+        # Contraseña en texto plano (sena123 o antes del hash)
+        if not pwd_guardado.startswith('$2b$') and not pwd_guardado.startswith('$2a$'):
+            if password == pwd_guardado:
+                return instructor
+            return None
+
+        # Contraseña hasheada con bcrypt
+        try:
+            if bcrypt.checkpw(password.encode('utf-8'), pwd_guardado.encode('utf-8')):
+                return instructor
+        except Exception as e:
+            logging.error(f"Error al verificar password instructor: {e}")
+        return None
 
     def obtener_fichas_instructor(self, id_instructor):
         query = """SELECT f.id_ficha, f.codigo_ficha, f.nombre_programa, f.jornada
