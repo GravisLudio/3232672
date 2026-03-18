@@ -3,6 +3,7 @@ from tkinter import messagebox, filedialog
 import datetime
 import logging
 import bcrypt
+from validadores import Validador
 
 
 class AsistenciaService:
@@ -104,15 +105,21 @@ class AsistenciaService:
     def guardar_aprendiz_manual(self, datos, id_ficha):
 
         documento = datos.get("Documento", "").strip()
-        
+        correo    = datos.get("Correo", "").strip()
+
         if not documento or not datos["Nombre Completo"] or not id_ficha:
             return False, "Documento, Nombre y Ficha son campos obligatorios."
-        
+
         if len(documento) > 10:
             return False, "❌ El documento no puede tener más de 10 dígitos."
-        
+
         if not documento.isdigit():
             return False, "❌ El documento debe contener solo números."
+
+        if correo:
+            valido, msg = Validador.validar_email(correo)
+            if not valido:
+                return False, f"❌ Correo inválido: {msg}"
 
         try:
             self.db.cursor.execute(
@@ -646,4 +653,3 @@ class AsistenciaService:
             ORDER BY f.codigo_ficha
         """, (id_instructor,))
         return self.db.cursor.fetchall()
-

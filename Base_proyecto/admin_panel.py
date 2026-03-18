@@ -741,6 +741,13 @@ class PantallaAdministrador:
                 lbl_err.configure(text="⚠ Documento, Nombre y Usuario son obligatorios.")
                 return
 
+            if cor:
+                from validadores import Validador
+                valido, msg_email = Validador.validar_email(cor)
+                if not valido:
+                    lbl_err.configure(text=f"⚠ Correo inválido: {msg_email}")
+                    return
+
             id_comp_p = None
             esp_sel = cb_esp.get()
             if not esp_sel.startswith("—"):
