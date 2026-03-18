@@ -2,6 +2,7 @@
 Módulo PasswordManager
 Encapsula funcionalidades de cambio de contraseña y calendario personalizado
 """
+import re
 import tkinter as tk
 from tkinter import ttk, messagebox
 import customtkinter as ctk
@@ -10,6 +11,7 @@ import datetime
 import calendar as _calendar
 import bcrypt
 import logging
+from validadores import Validador
 
 
 class CalendarioPersonalizado(ctk.CTkFrame):
@@ -298,41 +300,41 @@ class PasswordManager:
         req_frame.pack(fill="x", pady=(0, 20))
 
         requisitos = {
-            "long": ctk.CTkLabel(req_frame, text="✗ Mínimo 8 caracteres", 
-                                text_color="#E74C3C", font=("Segoe UI", 11)),
-            "upper": ctk.CTkLabel(req_frame, text="✗ Al menos una mayúscula", 
-                                 text_color="#E74C3C", font=("Segoe UI", 11)),
-            "lower": ctk.CTkLabel(req_frame, text="✗ Al menos una minúscula", 
-                                 text_color="#E74C3C", font=("Segoe UI", 11)),
-            "num": ctk.CTkLabel(req_frame, text="✗ Al menos un número", 
-                               text_color="#E74C3C", font=("Segoe UI", 11))
+            "long":     ctk.CTkLabel(req_frame, text="✗ Mínimo 8 caracteres",
+                                     text_color="#E74C3C", font=("Segoe UI", 11)),
+            "upper":    ctk.CTkLabel(req_frame, text="✗ Al menos una mayúscula",
+                                     text_color="#E74C3C", font=("Segoe UI", 11)),
+            "lower":    ctk.CTkLabel(req_frame, text="✗ Al menos una minúscula",
+                                     text_color="#E74C3C", font=("Segoe UI", 11)),
+            "num":      ctk.CTkLabel(req_frame, text="✗ Al menos un número",
+                                     text_color="#E74C3C", font=("Segoe UI", 11)),
+            "special":  ctk.CTkLabel(req_frame, text="✗ Al menos un carácter especial (!@#$...)",
+                                     text_color="#E74C3C", font=("Segoe UI", 11)),
         }
-        
+
         for lbl in requisitos.values():
             lbl.pack(anchor="w", padx=15, pady=6)
 
         def validar(*args):
             p = pass_var.get()
             cond = {
-                "long": len(p) >= 8,
-                "upper": any(c.isupper() for c in p),
-                "lower": any(c.islower() for c in p),
-                "num": any(c.isdigit() for c in p)
+                "long":    len(p) >= 8,
+                "upper":   bool(re.search(r'[A-Z]', p)),
+                "lower":   bool(re.search(r'[a-z]', p)),
+                "num":     bool(re.search(r'\d', p)),
+                "special": bool(re.search(r'[!@#$%^&*()\-_=+\[\]{};:\'",.<>?/\\|`~]', p)),
             }
-            
-            symbols = {"long": "✓", "upper": "✓", "lower": "✓", "num": "✓"}
             texts = {
-                "long": "Mínimo 8 caracteres",
-                "upper": "Al menos una mayúscula",
-                "lower": "Al menos una minúscula",
-                "num": "Al menos un número"
+                "long":    "Mínimo 8 caracteres",
+                "upper":   "Al menos una mayúscula",
+                "lower":   "Al menos una minúscula",
+                "num":     "Al menos un número",
+                "special": "Al menos un carácter especial (!@#$...)",
             }
-            
             for k, c in cond.items():
                 color = self.sena_green if c else "#E74C3C"
-                symbol = symbols[k] if c else "✗"
+                symbol = "✓" if c else "✗"
                 requisitos[k].configure(text=f"{symbol} {texts[k]}", text_color=color)
-            
             return all(cond.values())
 
         pass_var.trace_add("write", validar)
@@ -362,4 +364,3 @@ class PasswordManager:
                      fg_color=self.sena_green, hover_color="#32900D",
                      font=("Segoe UI", 12, "bold"),
                      command=guardar).pack(fill="x")
-

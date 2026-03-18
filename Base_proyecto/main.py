@@ -1,3 +1,57 @@
+# ── Bootstrap: verifica e instala dependencias con el Python que está corriendo ──
+import sys
+import subprocess
+import importlib
+
+def _asegurar_pip():
+    """Instala pip si no está disponible"""
+    try:
+        import pip  # noqa
+    except ImportError:
+        subprocess.check_call(
+            [sys.executable, "-m", "ensurepip", "--upgrade"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--upgrade", "pip", "-q"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+
+def _instalar_si_falta(paquete, import_name=None):
+    nombre = import_name or paquete
+    try:
+        importlib.import_module(nombre)
+    except ImportError:
+        print(f"[CRS] Instalando {paquete}...")
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", paquete,
+                 "--only-binary", ":all:", "-q"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        except Exception:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", paquete, "-q"]
+            )
+
+_asegurar_pip()
+
+_dependencias = [
+    ("bcrypt",                 "bcrypt"),
+    ("customtkinter",          "customtkinter"),
+    ("mysql-connector-python", "mysql.connector"),
+    ("tkcalendar",             "tkcalendar"),
+    ("pandas",                 "pandas"),
+    ("openpyxl",               "openpyxl"),
+    ("reportlab",              "reportlab"),
+    ("python-dotenv",          "dotenv"),
+    ("Pillow",                 "PIL"),
+]
+
+for _pkg, _imp in _dependencias:
+    _instalar_si_falta(_pkg, _imp)
+# ── Fin bootstrap ─────────────────────────────────────────────────────────────
+
 import tkinter as tk 
 from tkinter import ttk, messagebox, filedialog
 import pandas as pd
@@ -5,6 +59,7 @@ from conexion import InventarioDB
 from tkcalendar import Calendar
 import datetime
 import re
+import bcrypt
 import customtkinter as ctk 
 import logging
 from logging_config import configure_logging
@@ -751,7 +806,7 @@ class SistemaHSGSCRS:
         ctk.CTkLabel(ventana, text="Nueva Contraseña:",
                     font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=25, pady=(10, 2))
         ent_pass = ctk.CTkEntry(ventana, show="*", width=360, height=36,
-                                placeholder_text="Mínimo 6 caracteres")
+                                placeholder_text="Mín. 8 chars, mayúscula, número y especial")
         ent_pass.pack(padx=25, pady=(0, 6))
 
         ctk.CTkLabel(ventana, text="Confirmar Contraseña:",
@@ -771,9 +826,6 @@ class SistemaHSGSCRS:
             if not pass1 or not pass2:
                 lbl_error.configure(text="⚠️ Ambos campos son obligatorios.")
                 return
-            if len(pass1) < 6:
-                lbl_error.configure(text="⚠️ La contraseña debe tener al menos 6 caracteres.")
-                return
             if pass1 == "sena123":
                 lbl_error.configure(text="⚠️ No puedes usar la contraseña por defecto.")
                 return
@@ -781,10 +833,16 @@ class SistemaHSGSCRS:
                 lbl_error.configure(text="⚠️ Las contraseñas no coinciden.")
                 return
 
+            valido, msg = Validador.validar_password(pass1)
+            if not valido:
+                lbl_error.configure(text=f"⚠️ {msg}")
+                return
+
             try:
+                hash_password = bcrypt.hashpw(pass1.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
                 self.db.cursor.execute(
                     "UPDATE instructores SET password=%s, cambio_pass=1 WHERE documento=%s",
-                    (pass1, documento)
+                    (hash_password, documento)
                 )
                 self.db.conexion.commit()
                 ventana.grab_release()
@@ -833,4 +891,3 @@ if __name__ == "__main__":
     root = ctk.CTk() 
     app = SistemaHSGSCRS(root)
     root.mainloop()
-

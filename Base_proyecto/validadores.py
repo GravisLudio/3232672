@@ -30,25 +30,32 @@ class Validador:
             return False, "Nombre no puede empezar con número"
         return True, "OK"
     
+    # Patrón Regex: mínimo 8 chars, mayúscula, minúscula, dígito y carácter especial
+    REGEX_PASSWORD = re.compile(
+        r'^(?=.*[A-Z])'          # al menos una mayúscula
+        r'(?=.*[a-z])'           # al menos una minúscula
+        r'(?=.*\d)'              # al menos un dígito
+        r'(?=.*[!@#$%^&*()\-_=+\[\]{};:\'",.<>?/\\|`~])'  # al menos un especial
+        r'.{8,}$'                # mínimo 8 caracteres
+    )
+
     @staticmethod
     def validar_password(password):
         requisitos = {
-            'longitud': len(password) >= 8,
-            'mayuscula': any(c.isupper() for c in password),
-            'minuscula': any(c.islower() for c in password),
-            'numero': any(c.isdigit() for c in password)
+            'longitud':  len(password) >= 8,
+            'mayuscula': bool(re.search(r'[A-Z]', password)),
+            'minuscula': bool(re.search(r'[a-z]', password)),
+            'numero':    bool(re.search(r'\d', password)),
+            'especial':  bool(re.search(r'[!@#$%^&*()\-_=+\[\]{};:\'",.<>?/\\|`~]', password)),
         }
-        
+
         if not all(requisitos.values()):
             falta = []
-            if not requisitos['longitud']:
-                falta.append("8+ caracteres")
-            if not requisitos['mayuscula']:
-                falta.append("mayúscula")
-            if not requisitos['minuscula']:
-                falta.append("minúscula")
-            if not requisitos['numero']:
-                falta.append("número")
+            if not requisitos['longitud']:  falta.append("8+ caracteres")
+            if not requisitos['mayuscula']: falta.append("mayúscula")
+            if not requisitos['minuscula']: falta.append("minúscula")
+            if not requisitos['numero']:    falta.append("número")
+            if not requisitos['especial']:  falta.append("carácter especial (!@#$...)")
             return False, f"Falta: {', '.join(falta)}"
         return True, "OK"
     
@@ -77,4 +84,3 @@ class Validador:
             return False, msg
         
         return True, "OK"
-
