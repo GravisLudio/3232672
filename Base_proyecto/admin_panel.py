@@ -1373,6 +1373,25 @@ class PantallaInstructor:
                      font=("Segoe UI", 11),
                      command=self._limpiar_filtro_faltas).pack(side="left")
 
+        # ── Fila de fechas ────────────────────────────────────────────────────
+        fila_fechas = ctk.CTkFrame(f_filtros, fg_color="transparent")
+        fila_fechas.pack(fill="x", padx=15, pady=(0, 10))
+
+        ctk.CTkLabel(fila_fechas, text="Desde:",
+                    font=("Segoe UI", 11)).pack(side="left", padx=(0, 6))
+        self.entry_filtro_desde = ctk.CTkEntry(
+            fila_fechas, placeholder_text="DD/MM/YYYY", width=120, height=34)
+        self.entry_filtro_desde.pack(side="left", padx=(0, 15))
+
+        ctk.CTkLabel(fila_fechas, text="Hasta:",
+                    font=("Segoe UI", 11)).pack(side="left", padx=(0, 6))
+        self.entry_filtro_hasta = ctk.CTkEntry(
+            fila_fechas, placeholder_text="DD/MM/YYYY", width=120, height=34)
+        self.entry_filtro_hasta.pack(side="left", padx=(0, 15))
+
+        ctk.CTkLabel(fila_fechas, text="(dejar vacío para ver todas las fechas)",
+                    font=("Segoe UI", 10), text_color="#888").pack(side="left")
+
         # ── Tabla de faltas registradas ───────────────────────────────────────
         f_lista = ctk.CTkFrame(scroll, fg_color="#FFFFFF", corner_radius=8,
                                border_width=1, border_color="#E0E0E0")
@@ -1467,12 +1486,28 @@ class PantallaInstructor:
         self._aplicar_filtro_faltas()
 
     def _aplicar_filtro_faltas(self, valor_combo=None):
-        """Aplica los filtros de ficha y estudiante a la tabla de faltas"""
+        """Aplica los filtros de ficha, estudiante y rango de fechas a la tabla de faltas"""
         id_instructor = self.instructor.get('id_instructor', 0)
         fichas = self.servicio.obtener_fichas_instructor(id_instructor)
 
         sel_ficha = self.combo_filtro_ficha.get()
         sel_est = self.combo_filtro_est.get()
+
+        # ── Parsear fechas opcionales ─────────────────────────────────────────
+        fecha_desde = None
+        fecha_hasta = None
+        try:
+            txt_desde = self.entry_filtro_desde.get().strip()
+            if txt_desde:
+                fecha_desde = datetime.datetime.strptime(txt_desde, '%d/%m/%Y').date()
+        except (ValueError, AttributeError):
+            pass
+        try:
+            txt_hasta = self.entry_filtro_hasta.get().strip()
+            if txt_hasta:
+                fecha_hasta = datetime.datetime.strptime(txt_hasta, '%d/%m/%Y').date()
+        except (ValueError, AttributeError):
+            pass
 
         # Determinar qué fichas consultar
         if sel_ficha.startswith("—"):
@@ -1490,6 +1525,12 @@ class PantallaInstructor:
             nombre_est = sel_est.split(" - ")[-1] if " - " in sel_est else sel_est
             titulo += f" — {nombre_est}"
 
+        # Agregar rango de fechas al título si aplica
+        if fecha_desde or fecha_hasta:
+            desde_str = fecha_desde.strftime('%d/%m/%Y') if fecha_desde else "inicio"
+            hasta_str = fecha_hasta.strftime('%d/%m/%Y') if fecha_hasta else "hoy"
+            titulo += f" [{desde_str} → {hasta_str}]"
+
         self.lbl_faltas_titulo.configure(text=titulo)
 
         # Limpiar tabla
@@ -1500,9 +1541,18 @@ class PantallaInstructor:
         for ficha in fichas_a_consultar:
             faltas = self.servicio.obtener_faltas_ficha(ficha['id_ficha'])
             for falta in faltas:
-                # Aplicar filtro de estudiante si aplica
+                # Filtro de estudiante
                 if doc_filtro and falta.get('documento_estudiante') != doc_filtro:
                     continue
+                # Filtro de fechas
+                fecha_falta = falta.get('fecha_falta')
+                if fecha_falta:
+                    if hasattr(fecha_falta, 'date'):
+                        fecha_falta = fecha_falta.date()
+                    if fecha_desde and fecha_falta < fecha_desde:
+                        continue
+                    if fecha_hasta and fecha_falta > fecha_hasta:
+                        continue
                 self.tv_faltas.insert("", tk.END, values=(
                     falta.get('nombre_completo', 'N/A'),
                     falta.get('tipo_falta', 'N/A'),
@@ -1515,10 +1565,12 @@ class PantallaInstructor:
         self.lbl_faltas_count.configure(text=f"{total} falta(s) encontrada(s)")
 
     def _limpiar_filtro_faltas(self):
-        """Restablece los filtros a 'Todas'"""
+        """Restablece todos los filtros incluyendo fechas"""
         self.combo_filtro_ficha.set("— Todas —")
         self.combo_filtro_est.configure(values=["— Todos —"])
         self.combo_filtro_est.set("— Todos —")
+        self.entry_filtro_desde.delete(0, tk.END)
+        self.entry_filtro_hasta.delete(0, tk.END)
         self._aplicar_filtro_faltas()
 
     def _cargar_faltas_ficha(self, id_ficha):
@@ -1588,4 +1640,3 @@ class PantallaInstructor:
             except:
                 pass
             self.app.mostrar_inicio()
-
