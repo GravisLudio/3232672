@@ -1,12 +1,66 @@
-import tkinter as tk
+# ── Bootstrap: verifica e instala dependencias con el Python que está corriendo ──
+import sys
+import subprocess
+import importlib
+
+def _asegurar_pip():
+    """Instala pip si no está disponible"""
+    try:
+        import pip  # noqa
+    except ImportError:
+        subprocess.check_call(
+            [sys.executable, "-m", "ensurepip", "--upgrade"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--upgrade", "pip", "-q"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+
+def _instalar_si_falta(paquete, import_name=None):
+    nombre = import_name or paquete
+    try:
+        importlib.import_module(nombre)
+    except ImportError:
+        print(f"[CRS] Instalando {paquete}...")
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", paquete,
+                 "--only-binary", ":all:", "-q"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        except Exception:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", paquete, "-q"]
+            )
+
+_asegurar_pip()
+
+_dependencias = [
+    ("bcrypt",                 "bcrypt"),
+    ("customtkinter",          "customtkinter"),
+    ("mysql-connector-python", "mysql.connector"),
+    ("tkcalendar",             "tkcalendar"),
+    ("pandas",                 "pandas"),
+    ("openpyxl",               "openpyxl"),
+    ("reportlab",              "reportlab"),
+    ("python-dotenv",          "dotenv"),
+    ("Pillow",                 "PIL"),
+]
+
+for _pkg, _imp in _dependencias:
+    _instalar_si_falta(_pkg, _imp)
+# ── Fin bootstrap ─────────────────────────────────────────────────────────────
+
+import tkinter as tk 
 from tkinter import ttk, messagebox, filedialog
 import pandas as pd
-from conexion import InventarioDB
+from conexion import InventarioDB 
 from tkcalendar import Calendar
 import datetime
 import re
 import bcrypt
-import customtkinter as ctk
+import customtkinter as ctk 
 import logging
 from logging_config import configure_logging
 from PIL import Image, ImageTk
@@ -51,11 +105,35 @@ ctk.set_default_color_theme("green")
 configure_logging()
 
 
+def _calcular_escala(root):
+    """Calcula factor de escala según resolución real de la pantalla.
+    Referencia: 1080p = factor 1.0. Pantallas menores reducen, mayores aumentan."""
+    alto = root.winfo_screenheight()
+    if alto >= 1440:  return 1.25
+    if alto >= 1080:  return 1.0
+    if alto >= 900:   return 0.88
+    if alto >= 768:   return 0.78
+    return 0.70       # resoluciones muy pequeñas
+
+def _s(valor, escala):
+    """Escala un valor numérico (tamaño, font, padding) según el factor."""
+    return max(1, int(valor * escala))
+
+
 class SistemaHSGSCRS:
     def __init__(self, root):
         self.root = root
         self.root.title("C.R.S - Chronos Registry System")
-        
+
+        # ── Escala adaptativa según resolución ────────────────────────────────
+        # Maximizar PRIMERO para que winfo_screenheight sea el real
+        self.root.state('zoomed')
+        self.root.update()
+        self.escala = _calcular_escala(self.root)
+        ctk.set_widget_scaling(self.escala)
+        # NO usar set_window_scaling — interfiere con zoomed
+        # ──────────────────────────────────────────────────────────────────────
+
         # Ruta base del script para recursos
         self.ruta_base = os.path.dirname(os.path.abspath(__file__))
         
@@ -103,23 +181,18 @@ class SistemaHSGSCRS:
         self._construir_pantalla_terminal()
         self._construir_pantalla_login()
 
-        self.root.withdraw() 
-        self.root.after(100, self.lanzar_sistema)
+        self.root.withdraw()
+        self.root.after(150, self.lanzar_sistema)
         
 
     def lanzar_sistema(self):
-        self.root.deiconify() 
-        self.root.state('zoomed')
+        self.root.deiconify()
+        self.root.state('zoomed')  # re-aplicar zoomed porque deiconify lo puede resetear
         self.root.resizable(True, True)
-        # Ajustar después de renderizar para respetar barra de tareas
-        self.root.after(100, self._ajustar_ventana_maximizada)
         self.animacion_entrada()
-    
+
     def _ajustar_ventana_maximizada(self):
-        """Ajusta la ventana maximizada para no tapar la barra de tareas de Windows"""
-        ancho = self.root.winfo_width()
-        alto = self.root.winfo_height() - 50  # Restar espacio de barra de tareas
-        self.root.geometry(f'{ancho}x{alto}+0+0')
+        pass
     
 
     def _construir_pantalla_intro(self):
@@ -196,69 +269,85 @@ class SistemaHSGSCRS:
     def _construir_pantalla_terminal(self):
         """Construye la pantalla de registro de asistencia"""
         frame = self.frames['terminal']
-        
+
         # Header superior
-        head = ctk.CTkFrame(frame, height=70, corner_radius=0, fg_color=self.sena_green)
+        head = ctk.CTkFrame(frame, height=_s(60, self.escala), corner_radius=0, fg_color=self.sena_green)
         head.pack(fill="x")
-        ctk.CTkButton(head, text="INICIO", width=140, fg_color=self.sena_dark, 
-                     command=self.mostrar_inicio).pack(side="left", padx=25, pady=15)
-        
-        # Body principal
-        body = ctk.CTkFrame(frame, fg_color=self.bg_light)
-        body.pack(fill="both", expand=True)
-        
-        # Frame central para el contenido
-        f_center = ctk.CTkFrame(body, fg_color="transparent")
-        f_center.pack(fill="both", expand=True, padx=50, pady=60)
-        
-        # Tarjeta principal de registro
-        f = ctk.CTkFrame(f_center, width=700, height=600, corner_radius=25, 
-                        fg_color=self.bg_light, border_width=2, border_color=self.sena_green)
-        f.pack(pady=50, padx=20)
-        
-        # Título
-        f_title = ctk.CTkFrame(f, fg_color=self.sena_green, corner_radius=20)
-        f_title.pack(fill="x", pady=20, padx=20)
-        
-        ctk.CTkLabel(f_title, text="REGISTRO DE ASISTENCIA", font=("Segoe UI", 26, "bold"), 
-                    text_color="white").pack(pady=20)
-        ctk.CTkLabel(f_title, text="Chronos Registry System", font=("Segoe UI", 11), 
-                    text_color="#E8F5E9").pack(pady=(0, 15))
-        
-        # Entrada de documento
-        self.ent_doc_terminal = ctk.CTkEntry(f, font=("Segoe UI", 32), width=550, height=85, 
-                              placeholder_text="N° Documento", justify="center", 
-                              border_width=2, border_color=self.sena_green)
-        self.ent_doc_terminal.pack(pady=35, padx=30)
-        
-        # Botones de acción
-        f_btns = ctk.CTkFrame(f, fg_color="transparent")
-        f_btns.pack(pady=30)
-        
-        ctk.CTkButton(f_btns, text="MARCAR ENTRADA", font=("Segoe UI", 15, "bold"), 
-                     height=70, width=500, fg_color=self.sena_green, 
-                     hover_color=self.sena_dark, command=lambda:self._procesar_asistencia("in")).pack(pady=12, padx=20)
-        
-        ctk.CTkButton(f_btns, text="MARCAR SALIDA", font=("Segoe UI", 15, "bold"), 
-                     height=70, width=500, fg_color="#E67E22", 
-                     hover_color="#D35400", command=lambda:self._procesar_asistencia("out")).pack(pady=12, padx=20)
-        
-        # Footer con logo SENA
-        f_footer = ctk.CTkFrame(body, fg_color=self.bg_light, height=80)
+        head.pack_propagate(False)
+        ctk.CTkButton(head, text="INICIO", width=_s(120, self.escala),
+                     fg_color=self.sena_dark,
+                     command=self.mostrar_inicio).pack(side="left", padx=20, pady=10)
+
+        # Footer con logo — se define ANTES del body para que pack side=bottom funcione
+        logo_size = _s(55, self.escala)
+        f_footer = ctk.CTkFrame(frame, fg_color=self.bg_light, height=logo_size + 16)
         f_footer.pack(fill="x", side="bottom")
-        
+        f_footer.pack_propagate(False)
         try:
             ruta_logo = os.path.join(self.ruta_base, "images", "logosena.png")
             sena_logo_pil = Image.open(ruta_logo)
-            sena_logo_pil = sena_logo_pil.resize((80, 80), Image.Resampling.LANCZOS)
+            sena_logo_pil = sena_logo_pil.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
             sena_logo = ImageTk.PhotoImage(sena_logo_pil)
             lbl_logo = tk.Label(f_footer, image=sena_logo, bg=self.bg_light)
             lbl_logo.image = sena_logo
-            lbl_logo.pack(side="right", padx=20, pady=10)
+            lbl_logo.pack(side="right", padx=12, pady=8)
         except Exception as e:
             logging.warning(f"No se pudo cargar logo SENA: {e}")
-            ctk.CTkLabel(f_footer, text="SENA", font=("Segoe UI", 12, "bold"), 
-                        text_color=self.sena_green).pack(side="right", padx=20)
+            ctk.CTkLabel(f_footer, text="SENA", font=("Segoe UI", 11, "bold"),
+                        text_color=self.sena_green).pack(side="right", padx=15)
+
+        # Body principal — entre header y footer
+        body = ctk.CTkFrame(frame, fg_color=self.bg_light)
+        body.pack(fill="both", expand=True)
+
+        # Centrador vertical
+        f_center = ctk.CTkFrame(body, fg_color="transparent")
+        f_center.pack(expand=True)
+
+        # Tarjeta central
+        f = ctk.CTkFrame(f_center, corner_radius=20, width=_s(620, self.escala),
+                        fg_color=self.bg_light, border_width=2, border_color=self.sena_green)
+        f.pack(padx=20, pady=_s(20, self.escala))
+        f.pack_propagate(False) if False else None
+
+        # Título
+        f_title = ctk.CTkFrame(f, fg_color=self.sena_green, corner_radius=15)
+        f_title.pack(fill="x", pady=_s(15, self.escala), padx=_s(15, self.escala))
+        ctk.CTkLabel(f_title, text="REGISTRO DE ASISTENCIA",
+                    font=("Segoe UI", _s(22, self.escala), "bold"),
+                    text_color="white").pack(pady=_s(15, self.escala))
+        ctk.CTkLabel(f_title, text="Chronos Registry System",
+                    font=("Segoe UI", _s(10, self.escala)),
+                    text_color="#E8F5E9").pack(pady=(0, _s(10, self.escala)))
+
+        # Entrada de documento
+        self.ent_doc_terminal = ctk.CTkEntry(
+            f, font=("Segoe UI", _s(28, self.escala)),
+            height=_s(70, self.escala), width=_s(520, self.escala),
+            placeholder_text="N° Documento", justify="center",
+            border_width=2, border_color=self.sena_green)
+        self.ent_doc_terminal.pack(pady=_s(20, self.escala),
+                                   padx=_s(25, self.escala))
+
+        # Botones
+        f_btns = ctk.CTkFrame(f, fg_color="transparent")
+        f_btns.pack(padx=_s(25, self.escala), pady=_s(5, self.escala))
+
+        ctk.CTkButton(f_btns, text="MARCAR ENTRADA",
+                     font=("Segoe UI", _s(13, self.escala), "bold"),
+                     height=_s(58, self.escala), width=_s(520, self.escala),
+                     fg_color=self.sena_green,
+                     hover_color=self.sena_dark,
+                     command=lambda: self._procesar_asistencia("in")).pack(
+                     pady=_s(8, self.escala))
+
+        ctk.CTkButton(f_btns, text="MARCAR SALIDA",
+                     font=("Segoe UI", _s(13, self.escala), "bold"),
+                     height=_s(58, self.escala), width=_s(520, self.escala),
+                     fg_color="#E67E22",
+                     hover_color="#D35400",
+                     command=lambda: self._procesar_asistencia("out")).pack(
+                     pady=_s(8, self.escala))
     
     def _procesar_asistencia(self, tipo):
         """Procesa entrada o salida de asistencia"""
@@ -344,7 +433,7 @@ class SistemaHSGSCRS:
                     text_color=self.sena_orange).pack(anchor="w")
         self.ent_pass = ctk.CTkEntry(f_right, placeholder_text="Introduce tu contraseña",
                                     height=45, border_width=2,
-                                    border_color=self.sena_orange, show="•",
+                                    border_color=self.sena_orange, show="*",
                                     placeholder_text_color=self.sena_orange,
                                     fg_color=self.bg_light)
         self.ent_pass.pack(fill="x", pady=(5, 30))
